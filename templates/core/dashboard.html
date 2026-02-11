@@ -1,0 +1,25 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<div class="card">
+    <h1>📊 Trading Dashboard</h1>
+
+    <h3>Momentum Ranking</h3>
+
+    <table>
+        <tr>
+            <th>Ticker</th>
+            <th>Momentum</th>
+        </tr>
+
+        {% for stock in ranking %}
+        <tr>
+            <td>{{ stock.ticker }}</td>
+            <td>{{ stock.momentum }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</div>
+{% endblock %}
+

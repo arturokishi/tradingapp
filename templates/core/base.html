@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trading Platform</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            background-color: #f4f6f9;
+        }
+
+        .navbar {
+            background-color: #111827;
+            padding: 15px;
+        }
+
+        .navbar a {
+            color: white;
+            margin-right: 20px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .container {
+            padding: 40px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="/dashboard/">Dashboard</a>
+    <a href="/analysis/">Analysis</a>
+    <a href="/ranking/">Ranking</a>
+    <a href="/backtest/">Backtest</a>
+    <a href="/iv/">IV Analysis</a>
+    <a href="/trade-log/">Trade Log</a>
+</div>
+
+<div class="container">
+
+    <!-- News Feed (always visible) -->
+    <div class="card">
+        <h3>📰 Market News</h3>
+        {% if news %}
+            {% for article in news %}
+                <div style="margin-bottom:15px;">
+                    <strong>{{ article.title }}</strong><br>
+                    <small>{{ article.publisher }} | {{ article.date }}</small><br>
+                    <a href="{{ article.link }}" target="_blank">Read More</a>
+                </div>
+                <hr>
+            {% endfor %}
+        {% else %}
+            <p>No news available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Page-specific content -->
+    {% block content %}
+    {% endblock %}
+
+</div>
+
+</body>
+</html>
+
