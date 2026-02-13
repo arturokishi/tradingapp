@@ -133,31 +133,63 @@ def build_watchlist(tickers, period="1mo"):
             if data.empty:
                 continue
 
+            # Handle MultiIndex
             if isinstance(data.columns, pd.MultiIndex):
                 close = data["Close"].iloc[:, 0]
+                volume_series = data["Volume"].iloc[:, 0]
+                high_series = data["High"].iloc[:, 0]
+                low_series = data["Low"].iloc[:, 0]
             else:
                 close = data["Close"]
+                volume_series = data["Volume"]
+                high_series = data["High"]
+                low_series = data["Low"]
 
-                close = close.dropna()
+            close = close.dropna()
 
-
-            # Ensure Series
-            if isinstance(close, pd.DataFrame):
-                close = close.squeeze()
+            if len(close) < 2:
+                continue
 
             current_price = float(close.iloc[-1])
-            prev_close = float(close.iloc[-2]) if len(close) > 1 else current_price
+            prev_close = float(close.iloc[-2])
 
             change_pct = ((current_price - prev_close) / prev_close) * 100 if prev_close != 0 else 0
 
-            # 5-day performance
+            # 5D Performance
             if len(close) >= 5:
                 price_5d = float(close.iloc[-5])
                 perf_5d = ((current_price - price_5d) / price_5d) * 100 if price_5d != 0 else 0
             else:
                 perf_5d = 0
 
-            # Momentum (reuse your logic)
+            # 20D Performance
+            if len(close) >= 20:
+                price_20d = float(close.iloc[-20])
+                perf_20d = ((current_price - price_20d) / price_20d) * 100 if price_20d != 0 else 0
+            else:
+                perf_20d = 0
+
+            # Volume
+            volume = float(volume_series.iloc[-1])
+            avg_volume_20 = float(volume_series.rolling(20).mean().iloc[-1])
+            volume_ratio = volume / avg_volume_20 if avg_volume_20 != 0 else 0
+
+            # Volatility
+            returns = close.pct_change().dropna()
+            vol_5d = returns.tail(5).std() * np.sqrt(252)
+            vol_20d = returns.tail(20).std() * np.sqrt(252)
+
+            # RSI
+            delta = close.diff()
+            gain = delta.clip(lower=0)
+            loss = -delta.clip(upper=0)
+            avg_gain = gain.rolling(14).mean()
+            avg_loss = loss.rolling(14).mean()
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+            rsi_value = rsi.iloc[-1] if not rsi.empty else 0
+
+            # Momentum
             momentum = compute_momentum(data)
             momentum = float(momentum) if not pd.isna(momentum) else 0
 
@@ -166,17 +198,25 @@ def build_watchlist(tickers, period="1mo"):
                 "price": round(current_price, 2),
                 "change_pct": round(change_pct, 2),
                 "perf_5d": round(perf_5d, 2),
-                "momentum": round(momentum, 4)
+                "perf_20d": round(perf_20d, 2),
+                "volume_ratio": round(volume_ratio, 2),
+                "volatility_5d": round(vol_5d, 2),
+                "volatility_20d": round(vol_20d, 2),
+                "rsi": round(float(rsi_value), 2),
+                "volume": int(volume),
+                "high": round(float(high_series.iloc[-1]), 2),
+                "low": round(float(low_series.iloc[-1]), 2),
+                "alpha_score": 0,
+                "news_sentiment": 0,
+                "momentum": round(momentum, 4),
             })
 
         except Exception as e:
             print("Watchlist error:", ticker, e)
             continue
 
-       
-
-
     return results
+
 
 
 def build_watchlist_for_web(universe):

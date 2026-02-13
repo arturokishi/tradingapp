@@ -1,10 +1,66 @@
 {% extends "core/base.html" %}
+{% load humanize %}
 
 {% block content %}
+
+<style>
+.card {
+    padding: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+th {
+    background-color: #111;
+    color: white;
+    padding: 10px;
+    text-align: center;
+    font-weight: 600;
+}
+
+td {
+    padding: 8px;
+    text-align: center;
+}
+
+tr:nth-child(even) {
+    background-color: #f5f5f5;
+}
+
+.pos {
+    color: #00b894;
+    font-weight: 600;
+}
+
+.neg {
+    color: #d63031;
+    font-weight: 600;
+}
+
+.rsi-high {
+    color: #d63031;
+    font-weight: 600;
+}
+
+.rsi-low {
+    color: #00b894;
+    font-weight: 600;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+</style>
+
 <div class="card">
     <h1>📊 Trading Dashboard</h1>
 
-    <!-- Add Stock Form -->
+    <!-- Add Stock -->
     <h3>Add Stock</h3>
     <form method="POST" action="{% url 'add_stock' %}">
         {% csrf_token %}
@@ -14,10 +70,11 @@
 
     <hr>
 
-    <!-- Watchlist Table -->
+    <!-- Watchlist -->
     <h3>📈 Watchlist</h3>
 
-    <table border="1" cellpadding="5">
+    <div class="table-container">
+    <table>
         <tr>
             <th>Ticker</th>
             <th>Price</th>
@@ -38,37 +95,63 @@
 
         {% for stock in stocks %}
         <tr>
-            <td>{{ stock.ticker }}</td>
-            <td>${{ stock.price }}</td>
-            <td>{{ stock.change_pct }}%</td>
-            <td>{{ stock.five_day_pct }}%</td>
-            <td>{{ stock.twenty_day_pct }}%</td>
-            <td>{{ stock.volume_ratio }}</td>
-            <td>{{ stock.volatility_5d }}</td>
-            <td>{{ stock.volatility_20d }}</td>
-            <td>{{ stock.rsi }}</td>
-            <td>{{ stock.volume }}</td>
-            <td>{{ stock.high }}</td>
-            <td>{{ stock.low }}</td>
+            <td><strong>{{ stock.ticker }}</strong></td>
+
+            <td>${{ stock.price|floatformat:2 }}</td>
+
+            <td class="{% if stock.change_pct > 0 %}pos{% else %}neg{% endif %}">
+                {{ stock.change_pct|floatformat:2 }}%
+            </td>
+
+            <td class="{% if stock.perf_5d > 0 %}pos{% else %}neg{% endif %}">
+                {{ stock.perf_5d|floatformat:2 }}%
+            </td>
+
+            <td class="{% if stock.perf_20d > 0 %}pos{% else %}neg{% endif %}">
+                {{ stock.perf_20d|floatformat:2 }}%
+            </td>
+
+            <td>{{ stock.volume_ratio|floatformat:2 }}</td>
+            <td>{{ stock.volatility_5d|floatformat:2 }}</td>
+            <td>{{ stock.volatility_20d|floatformat:2 }}</td>
+
+            <td class="
+                {% if stock.rsi > 70 %}
+                    rsi-high
+                {% elif stock.rsi < 30 %}
+                    rsi-low
+                {% endif %}
+            ">
+                {{ stock.rsi|floatformat:1 }}
+            </td>
+
+            <td>{{ stock.volume|intcomma }}</td>
+            <td>{{ stock.high|floatformat:2 }}</td>
+            <td>{{ stock.low|floatformat:2 }}</td>
+
             <td>{{ stock.alpha_score }}</td>
             <td>{{ stock.news_sentiment }}</td>
+
             <td>
                 <a href="{% url 'remove_stock' stock.ticker %}">❌</a>
             </td>
         </tr>
+
         {% empty %}
         <tr>
             <td colspan="15">No watchlist data available.</td>
         </tr>
         {% endfor %}
     </table>
+    </div>
 
     <hr>
 
     <!-- Momentum Ranking -->
     <h3>🏆 Momentum Ranking</h3>
 
-    <table border="1" cellpadding="5">
+    <div class="table-container">
+    <table>
         <tr>
             <th>Ticker</th>
             <th>Momentum</th>
@@ -76,17 +159,21 @@
 
         {% for stock in ranking %}
         <tr>
-            <td>{{ stock.ticker }}</td>
-            <td>{{ stock.momentum }}</td>
+            <td><strong>{{ stock.ticker }}</strong></td>
+            <td>{{ stock.momentum|floatformat:4 }}</td>
         </tr>
+
         {% empty %}
         <tr>
             <td colspan="2">No ranking data available.</td>
         </tr>
         {% endfor %}
     </table>
+    </div>
 
 </div>
+
 {% endblock %}
+
 
 
