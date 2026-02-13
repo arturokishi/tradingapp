@@ -1,15 +1,13 @@
 from django.shortcuts import render
-from .services import rank_stocks
-from .services import build_watchlist
-from core.services import build_watchlist_for_web
-from .services import build_watchlist_for_web, rank_stocks
-
-
-
+from .services import (
+    rank_stocks,
+    build_watchlist,
+    build_watchlist_for_web,
+    get_market_news
+)
 
 def home(request):
     return render(request, "core/base.html")
-
 
 def analysis(request):
     return render(request, "core/analysis.html")
@@ -26,51 +24,13 @@ def iv(request):
 def trade_log(request):
     return render(request, "core/trade_log.html")
 
-
-
-
-from .services import rank_stocks, get_market_news
-
-
-def dashboard(request):
-    tickers = ["AAPL", "MSFT", "NVDA", "AMZN", "TSLA"]
-
-    ranking = rank_stocks(tickers)
-    news = get_market_news()
-    stocks = build_watchlist(tickers)
-
-    context = {
-        "ranking": ranking,
-        "news": news,
-        "stocks": stocks
-    }
-
-    return render(request, "core/dashboard.html", context)
-   
-
-
-
-def analysis(request):
-    return render(request, "core/analysis.html")
-
 def watchlist_view(request):
     tickers = ["AAPL", "MSFT", "NVDA", "AMZN", "TSLA"]
-
     stocks = build_watchlist(tickers)
 
-    context = {
+    return render(request, "core/watchlist.html", {
         "stocks": stocks
-    }
-
-    return render(request, "core/watchlist.html", context)
-
-
-
-
-
-
-
-
+    })
 
 def dashboard(request):
     UNIVERSE = [
@@ -81,9 +41,10 @@ def dashboard(request):
 
     stocks = build_watchlist_for_web(UNIVERSE)
     ranking = rank_stocks(UNIVERSE)
+    news = get_market_news()
 
     return render(request, "core/dashboard.html", {
         "stocks": stocks,
         "ranking": ranking,
-        "news": None
+        "news": news
     })

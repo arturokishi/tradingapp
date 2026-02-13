@@ -14,18 +14,30 @@ def get_stock_data(ticker, period="1y"):
 
 
 def compute_momentum(data):
-    returns = data["Close"].pct_change()
-    rolling = returns.rolling(30).mean()
-
-    if rolling.dropna().empty:
+    if "Close" not in data.columns:
         return 0
 
-    value = rolling.dropna().iloc[-1]
+    close = data["Close"]
 
-    if isinstance(value, pd.Series):
-        value = value.squeeze()
+    # If multi-index or dataframe, squeeze to Series
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    close = close.dropna()
+
+    if len(close) < 30:
+        return 0
+
+    returns = close.pct_change().dropna()
+    rolling = returns.rolling(30).mean().dropna()
+
+    if rolling.empty:
+        return 0
+
+    value = rolling.iloc[-1]
 
     return float(value)
+
 
 
 
@@ -73,26 +85,34 @@ def rank_stocks(tickers):
 
 
 
-
 def get_market_news(limit=5):
     try:
         ticker = yf.Ticker("SPY")
         news = ticker.news
 
+        if not news:
+            return []
+
         results = []
 
         for item in news[:limit]:
-            timestamp = item.get("providerPublishTime")
+            content = item.get("content", {})
+
+            title = content.get("title", "No title")
+            publisher = content.get("provider", {}).get("displayName", "Unknown")
+            link = content.get("canonicalUrl", {}).get("url", "#")
+
+            timestamp = content.get("pubDate")
 
             if timestamp:
-                date = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+                date = pd.to_datetime(timestamp).strftime("%Y-%m-%d")
             else:
                 date = "N/A"
 
             results.append({
-                "title": item.get("title"),
-                "publisher": item.get("publisher"),
-                "link": item.get("link"),
+                "title": title,
+                "publisher": publisher,
+                "link": link,
                 "date": date
             })
 
@@ -101,6 +121,7 @@ def get_market_news(limit=5):
     except Exception as e:
         print("News error:", e)
         return []
+
 
 def build_watchlist(tickers, period="1mo"):
     results = []
@@ -152,29 +173,21 @@ def build_watchlist(tickers, period="1mo"):
             print("Watchlist error:", ticker, e)
             continue
 
+        print(StockWatchlist)
+
+
     return results
 
 
 def build_watchlist_for_web(universe):
     watchlist = StockWatchlist(universe)
 
-    watchlist.fetch_all_data(period="1mo")
+    watchlist.fetch_all_data(period="3mo")   # <- change to 3mo
     df = watchlist.calculate_metrics()
 
     if df.empty:
         return []
 
-    # Rename columns to match template keys
-    df = df.rename(columns={
-        "Ticker": "ticker",
-        "Price": "price",
-        "Change %": "change_pct",
-        "5D %": "five_day_pct",
-        "Alpha Score": "alpha_score",
-        "Signal": "signal",
-        "IV Rank %": "iv_rank",
-        "News Sentiment": "sentiment",
-        "Market State": "market_state"
-    })
-
     return df.to_dict(orient="records")
+
+
