@@ -10,6 +10,7 @@ urlpatterns = [
     path('backtest/', views.backtest, name="backtest"),
     path('iv/', views.iv, name="iv"),
     path('trade-log/', views.trade_log, name="trade_log"),
+    path("watchlist/", views.watchlist_view, name="watchlist"),
 ]
 
 

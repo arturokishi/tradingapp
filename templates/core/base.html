@@ -45,6 +45,20 @@
         button:hover {
             background-color: #1d4ed8;
         }
+
+        table th {
+            padding-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 8px 0;
+        }
+        
+        table tr:hover {
+            background-color: #f1f5f9;
+        }
+        
     </style>
 </head>
 <body>
@@ -76,6 +90,42 @@
             <p>No news available.</p>
         {% endif %}
     </div>
+
+    <!-- Watchlist -->
+<div class="card">
+    <h3>📊 Watchlist</h3>
+
+    {% if stocks %}
+        <table width="100%" style="border-collapse: collapse;">
+            <tr style="text-align:left;">
+                <th>Ticker</th>
+                <th>Price</th>
+                <th>1D %</th>
+                <th>5D %</th>
+                <th>Momentum</th>
+            </tr>
+
+            {% for stock in stocks %}
+            <tr style="border-top:1px solid #eee;">
+                <td><strong>{{ stock.ticker }}</strong></td>
+                <td>${{ stock.price }}</td>
+
+                <td style="color:{% if stock.change_pct > 0 %}green{% else %}red{% endif %};">
+                    {{ stock.change_pct }}%
+                </td>
+
+                <td style="color:{% if stock.perf_5d > 0 %}green{% else %}red{% endif %};">
+                    {{ stock.perf_5d }}%
+                </td>
+
+                <td>{{ stock.momentum }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No watchlist data available.</p>
+    {% endif %}
+</div>
 
     <!-- Page-specific content -->
     {% block content %}
