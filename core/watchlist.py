@@ -51,16 +51,13 @@ class StockWatchlist:
                     perf_5d = 0
 
                 metrics.append({
-                    "Ticker": ticker,
-                    "Price": round(float(current_price), 2),
-                    "Change %": round(float(day_change), 2),
-                    "5D %": round(float(perf_5d), 2),
-                    "Alpha Score": 0,
-                    "Signal": "NEUTRAL",
-                    "IV Rank %": 0,
-                    "News Sentiment": 0,
-                    "Market State": "NORMAL"
-                })
+                    "ticker": ticker,
+                    "price": round(float(current_price), 2),
+                    "change_pct": round(float(day_change), 2),
+                    "five_day_pct": round(float(perf_5d), 2),
+                    "momentum": 0,
+                                })
+
 
             except Exception as e:
                 print("Metric error:", ticker, e)
