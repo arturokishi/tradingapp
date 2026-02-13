@@ -173,7 +173,7 @@ def build_watchlist(tickers, period="1mo"):
             print("Watchlist error:", ticker, e)
             continue
 
-        print(StockWatchlist)
+       
 
 
     return results
