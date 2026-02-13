@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime
-from core.watchlist import StockWatchlist
+
 
 
 
@@ -180,14 +180,8 @@ def build_watchlist(tickers, period="1mo"):
 
 
 def build_watchlist_for_web(universe):
-    watchlist = StockWatchlist(universe)
+    
+    return build_watchlist(universe, period="3mo")
 
-    watchlist.fetch_all_data(period="3mo")   # <- change to 3mo
-    df = watchlist.calculate_metrics()
-
-    if df.empty:
-        return []
-
-    return df.to_dict(orient="records")
 
 

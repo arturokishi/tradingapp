@@ -4,9 +4,71 @@
 <div class="card">
     <h1>📊 Trading Dashboard</h1>
 
-    <h3>Momentum Ranking</h3>
+    <!-- Add Stock Form -->
+    <h3>Add Stock</h3>
+    <form method="POST" action="{% url 'add_stock' %}">
+        {% csrf_token %}
+        <input type="text" name="ticker" placeholder="Enter ticker (e.g. TSLA)" required>
+        <button type="submit">Add</button>
+    </form>
 
-    <table>
+    <hr>
+
+    <!-- Watchlist Table -->
+    <h3>📈 Watchlist</h3>
+
+    <table border="1" cellpadding="5">
+        <tr>
+            <th>Ticker</th>
+            <th>Price</th>
+            <th>1D %</th>
+            <th>5D %</th>
+            <th>20D %</th>
+            <th>Vol Ratio</th>
+            <th>Vol 5D</th>
+            <th>Vol 20D</th>
+            <th>RSI</th>
+            <th>Volume</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Alpha</th>
+            <th>Sentiment</th>
+            <th>Remove</th>
+        </tr>
+
+        {% for stock in stocks %}
+        <tr>
+            <td>{{ stock.ticker }}</td>
+            <td>${{ stock.price }}</td>
+            <td>{{ stock.change_pct }}%</td>
+            <td>{{ stock.five_day_pct }}%</td>
+            <td>{{ stock.twenty_day_pct }}%</td>
+            <td>{{ stock.volume_ratio }}</td>
+            <td>{{ stock.volatility_5d }}</td>
+            <td>{{ stock.volatility_20d }}</td>
+            <td>{{ stock.rsi }}</td>
+            <td>{{ stock.volume }}</td>
+            <td>{{ stock.high }}</td>
+            <td>{{ stock.low }}</td>
+            <td>{{ stock.alpha_score }}</td>
+            <td>{{ stock.news_sentiment }}</td>
+            <td>
+                <a href="{% url 'remove_stock' stock.ticker %}">❌</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="15">No watchlist data available.</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <hr>
+
+    <!-- Momentum Ranking -->
+    <h3>🏆 Momentum Ranking</h3>
+
+    <table border="1" cellpadding="5">
         <tr>
             <th>Ticker</th>
             <th>Momentum</th>
@@ -17,9 +79,14 @@
             <td>{{ stock.ticker }}</td>
             <td>{{ stock.momentum }}</td>
         </tr>
+        {% empty %}
+        <tr>
+            <td colspan="2">No ranking data available.</td>
+        </tr>
         {% endfor %}
     </table>
 
 </div>
 {% endblock %}
+
 

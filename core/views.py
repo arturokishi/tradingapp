@@ -1,4 +1,8 @@
 from django.shortcuts import render
+from django.shortcuts import redirect
+from .models import UserWatchlist
+
+
 from .services import (
     rank_stocks,
     build_watchlist,
@@ -33,18 +37,23 @@ def watchlist_view(request):
     })
 
 def dashboard(request):
-    UNIVERSE = [
-        "AAPL","MSFT","NVDA","GOOGL","META",
-        "AMZN","AVGO","ORCL","CRM","ADBE",
-        "JPM","BAC","WFC","GS","MS"
-    ]
+    tickers = list(UserWatchlist.objects.values_list("ticker", flat=True))
 
-    stocks = build_watchlist_for_web(UNIVERSE)
-    ranking = rank_stocks(UNIVERSE)
-    news = get_market_news()
+    stocks = build_watchlist_for_web(tickers)
 
     return render(request, "core/dashboard.html", {
-        "stocks": stocks,
-        "ranking": ranking,
-        "news": news
+        "stocks": stocks
     })
+
+
+
+def add_stock(request):
+    if request.method == "POST":
+        ticker = request.POST.get("ticker", "").upper()
+        if ticker:
+            UserWatchlist.objects.get_or_create(ticker=ticker)
+    return redirect("dashboard")
+
+def remove_stock(request, ticker):
+    UserWatchlist.objects.filter(ticker=ticker).delete()
+    return redirect("dashboard")
