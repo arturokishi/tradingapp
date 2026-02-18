@@ -1,6 +1,9 @@
 from django.shortcuts import render
 from django.shortcuts import redirect
 from .models import UserWatchlist
+from django.shortcuts import render
+from .economic_utils import get_all_economic_data  # Import your new function
+from .services import get_market_news  # Your existing news function
 
 
 from .services import (
@@ -10,8 +13,6 @@ from .services import (
     get_market_news
 )
 
-def home(request):
-    return render(request, "core/base.html")
 
 def analysis(request):
     return render(request, "core/analysis.html")
@@ -57,3 +58,15 @@ def add_stock(request):
 def remove_stock(request, ticker):
     UserWatchlist.objects.filter(ticker=ticker).delete()
     return redirect("dashboard")
+
+
+
+def home(request):
+    """Home page - shows economic data and news"""
+    eco_data = get_all_economic_data()
+    news = get_market_news()
+    
+    return render(request, "core/base.html", {  # Changed from home.html to base.html
+        'eco': eco_data,
+        'news': news
+    })

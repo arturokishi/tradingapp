@@ -1,11 +1,53 @@
-{% extends "core/base.html" %}
+
 {% load humanize %}
 
-{% block content %}
-
 <style>
+/* Navbar styling */
+.navbar {
+    background-color: #111827;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 20px;
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.navbar a:hover {
+    color: #fbbf24;
+}
+
+.nav-button {
+    background-color: #fbbf24;
+    color: #1f2933 !important;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.nav-button:hover {
+    background-color: #f59e0b;
+    color: #1f2933 !important;
+}
+
+/* Card styling */
 .card {
     padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
 }
 
 table {
@@ -55,26 +97,19 @@ tr:nth-child(even) {
 .table-container {
     overflow-x: auto;
 }
-
-/* Navbar button styling */
-.nav-button {
-    background-color: #fbbf24;
-    color: #1f2933;
-    padding: 8px 16px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: 600;
-    margin-left: 20px;
-}
-
-.nav-button:hover {
-    background-color: #f59e0b;
-}
 </style>
 
-<!-- Navbar with button to base.html -->
-<div style="background-color: #1f2933; padding: 15px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-    <h2 style="color: white; margin: 0;">📊 Trading Dashboard</h2>
+<!-- Full Navigation Bar -->
+<div class="navbar">
+    <div class="navbar-links">
+        <a href="{% url 'base' %}">Home</a>  <!-- This will go to '/' -->
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'analysis' %}">Analysis</a>
+        <a href="{% url 'ranking' %}">Ranking</a>
+        <a href="{% url 'backtest' %}">Backtest</a>
+        <a href="{% url 'iv' %}">IV Analysis</a>
+        <a href="{% url 'trade_log' %}">Trade Log</a>
+    </div>
     <a href="{% url 'base' %}" class="nav-button">🏠 Volver al Inicio</a>
 </div>
 
@@ -108,78 +143,60 @@ tr:nth-child(even) {
             <th>High</th>
             <th>Low</th>
             <th>Alpha</th>
-            <th>Remove</th>  <!-- Removed Sentiment column -->
+            <th>Remove</th>
         </tr>
 
         {% for stock in stocks %}
         <tr>
             <td><strong>{{ stock.ticker }}</strong></td>
-
             <td>${{ stock.price|floatformat:2 }}</td>
-
             <td class="{% if stock.change_pct > 0 %}pos{% else %}neg{% endif %}">
                 {{ stock.change_pct|floatformat:2 }}%
             </td>
-
             <td class="{% if stock.perf_5d > 0 %}pos{% else %}neg{% endif %}">
                 {{ stock.perf_5d|floatformat:2 }}%
             </td>
-
             <td class="{% if stock.perf_20d > 0 %}pos{% else %}neg{% endif %}">
                 {{ stock.perf_20d|floatformat:2 }}%
             </td>
-
             <td>{{ stock.volume_ratio|floatformat:2 }}</td>
             <td>{{ stock.volatility_5d|floatformat:2 }}</td>
             <td>{{ stock.volatility_20d|floatformat:2 }}</td>
-
             <td class="
-                {% if stock.rsi > 70 %}
-                    rsi-high
-                {% elif stock.rsi < 30 %}
-                    rsi-low
-                {% endif %}
-            ">
+                {% if stock.rsi > 70 %}rsi-high
+                {% elif stock.rsi < 30 %}rsi-low{% endif %}">
                 {{ stock.rsi|floatformat:1 }}
             </td>
-
             <td>{{ stock.volume|intcomma }}</td>
             <td>{{ stock.high|floatformat:2 }}</td>
             <td>{{ stock.low|floatformat:2 }}</td>
-
             <td>{{ stock.alpha_score }}</td>
-
             <td>
                 <a href="{% url 'remove_stock' stock.ticker %}">❌</a>
             </td>
         </tr>
-
         {% empty %}
         <tr>
-            <td colspan="14">No watchlist data available.</td>  <!-- Reduced colspan from 15 to 14 -->
+            <td colspan="14">No watchlist data available.</td>
         </tr>
         {% endfor %}
     </table>
     </div>
+</div>
 
-    <hr>
-
-    <!-- Momentum Ranking -->
+<div class="card">
     <h3>🏆 Momentum Ranking</h3>
-
     <div class="table-container">
     <table>
         <tr>
             <th>Ticker</th>
             <th>Momentum</th>
         </tr>
-
         {% for stock in ranking %}
         <tr>
             <td><strong>{{ stock.ticker }}</strong></td>
             <td>{{ stock.momentum|floatformat:4 }}</td>
         </tr>
-
         {% empty %}
         <tr>
             <td colspan="2">No ranking data available.</td>
@@ -187,45 +204,7 @@ tr:nth-child(even) {
         {% endfor %}
     </table>
     </div>
-
 </div>
-
-<div class="card">
-    <h3>📊 Watchlist</h3>
-
-    {% if stocks %}
-        <table width="100%" style="border-collapse: collapse;">
-            <tr style="text-align:left;">
-                <th>Ticker</th>
-                <th>Price</th>
-                <th>1D %</th>
-                <th>5D %</th>
-                <th>Momentum</th>
-            </tr>
-
-            {% for stock in stocks %}
-            <tr style="border-top:1px solid #eee;">
-                <td><strong>{{ stock.ticker }}</strong></td>
-                <td>${{ stock.price }}</td>
-
-                <td style="color:{% if stock.change_pct > 0 %}green{% else %}red{% endif %};">
-                    {{ stock.change_pct }}%
-                </td>
-
-                <td style="color:{% if stock.perf_5d > 0 %}green{% else %}red{% endif %};">
-                    {{ stock.perf_5d }}%
-                </td>
-
-                <td>{{ stock.momentum }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    {% else %}
-        <p>No watchlist data available.</p>
-    {% endif %}
-</div>
-
-{% endblock %}
 
 
 
