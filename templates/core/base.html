@@ -74,61 +74,29 @@
 
 <div class="container">
 
-    <!-- News Feed (always visible) -->
-    <div class="card">
-        <h3>📰 Market News</h3>
-        {% if news %}
-            {% for article in news %}
-                <div style="margin-bottom:15px;">
-                    <strong>{{ article.title }}</strong><br>
-                    <small>{{ article.publisher }} | {{ article.date }}</small><br>
-                    <a href="{{ article.link }}" target="_blank">Read More</a>
-                </div>
-                <hr>
-            {% endfor %}
-        {% else %}
-            <p>No news available.</p>
-        {% endif %}
-    </div>
 
     <!-- Watchlist -->
-<div class="card">
-    <h3>📊 Watchlist</h3>
 
-    {% if stocks %}
-        <table width="100%" style="border-collapse: collapse;">
-            <tr style="text-align:left;">
-                <th>Ticker</th>
-                <th>Price</th>
-                <th>1D %</th>
-                <th>5D %</th>
-                <th>Momentum</th>
-            </tr>
-
-            {% for stock in stocks %}
-            <tr style="border-top:1px solid #eee;">
-                <td><strong>{{ stock.ticker }}</strong></td>
-                <td>${{ stock.price }}</td>
-
-                <td style="color:{% if stock.change_pct > 0 %}green{% else %}red{% endif %};">
-                    {{ stock.change_pct }}%
-                </td>
-
-                <td style="color:{% if stock.perf_5d > 0 %}green{% else %}red{% endif %};">
-                    {{ stock.perf_5d }}%
-                </td>
-
-                <td>{{ stock.momentum }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    {% else %}
-        <p>No watchlist data available.</p>
-    {% endif %}
-</div>
 
     <!-- Page-specific content -->
     {% block content %}
+
+        <!-- News Feed (always visible) -->
+        <div class="card">
+            <h3>📰 Market News</h3>
+            {% if news %}
+                {% for article in news %}
+                    <div style="margin-bottom:15px;">
+                        <strong>{{ article.title }}</strong><br>
+                        <small>{{ article.publisher }} | {{ article.date }}</small><br>
+                        <a href="{{ article.link }}" target="_blank">Read More</a>
+                    </div>
+                    <hr>
+                {% endfor %}
+            {% else %}
+                <p>No news available.</p>
+            {% endif %}
+        </div>
     {% endblock %}
 
 </div>
