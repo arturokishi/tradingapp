@@ -1,8 +1,356 @@
-{% extends "core/base.html" %}
+
+{% load humanize %}
 
 {% block content %}
-<div class="card">
-    <h2>Stock Analysis</h2>
-    <p>Analysis tools will go here.</p>
+<style>
+    .analysis-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    .analysis-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .analysis-card h3 {
+        margin-top: 0;
+        color: #1e293b;
+        border-bottom: 2px solid #fbbf24;
+        padding-bottom: 10px;
+    }
+    
+    .stock-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .stock-selector select, .stock-selector input {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    
+    .stock-selector button {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    
+    .stock-selector button:hover {
+        background: #1d4ed8;
+    }
+    
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .metric-card {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #2563eb;
+    }
+    
+    .metric-label {
+        font-size: 12px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .metric-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-top: 5px;
+    }
+    
+    .metric-value.positive { color: #10b981; }
+    .metric-value.negative { color: #ef4444; }
+    
+    .news-section {
+        grid-column: span 2;
+    }
+    
+    .news-card {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 4px solid;
+    }
+    
+    .news-bullish { border-left-color: #10b981; }
+    .news-bearish { border-left-color: #ef4444; }
+    .news-neutral { border-left-color: #fbbf24; }
+    
+    .news-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    
+    .news-meta {
+        font-size: 12px;
+        color: #64748b;
+    }
+    
+    .news-link {
+        color: #2563eb;
+        text-decoration: none;
+        font-size: 12px;
+    }
+    
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .mc-results {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+    
+    .risk-high { color: #ef4444; font-weight: 600; }
+    .risk-medium { color: #f59e0b; font-weight: 600; }
+    .risk-low { color: #10b981; font-weight: 600; }
+    
+    .chart-container {
+        margin-top: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+    }
+</style>
+
+<div class="analysis-container">
+    <!-- Stock Analysis Card -->
+    <div class="analysis-card">
+        <h3>📈 Stock Analysis</h3>
+        
+        <div class="stock-selector">
+            <select id="ticker" style="flex: 2;">
+                {% for ticker in universe %}
+                <option value="{{ ticker }}">{{ ticker }}</option>
+                {% endfor %}
+            </select>
+            <button onclick="analyzeStock()">Analyze</button>
+        </div>
+        
+        <div id="analysis-loader" class="loader" style="display: none;"></div>
+        
+        <div id="analysis-results"></div>
+    </div>
+    
+    <!-- Monte Carlo Card -->
+    <div class="analysis-card">
+        <h3>🎲 Monte Carlo Simulation</h3>
+        
+        <div class="stock-selector">
+            <select id="mc-ticker" style="flex: 1;">
+                {% for ticker in universe %}
+                <option value="{{ ticker }}">{{ ticker }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" id="mc-simulations" placeholder="Simulations" value="1000" style="flex: 1;">
+            <input type="number" id="mc-years" placeholder="Years" value="5" style="flex: 1;">
+            <input type="number" id="mc-investment" placeholder="Investment ($)" value="10000" style="flex: 1;">
+            <button onclick="runMonteCarlo()">Run MC</button>
+        </div>
+        
+        <div id="mc-loader" class="loader" style="display: none;"></div>
+        <div id="mc-results"></div>
+    </div>
+    
+    <!-- News Section (spans both columns) -->
+    <div class="analysis-card news-section">
+        <h3>📰 Recent News & Sentiment</h3>
+        <div id="news-results"></div>
+    </div>
 </div>
+
+<script>
+async function analyzeStock() {
+    const ticker = document.getElementById('ticker').value;
+    const loader = document.getElementById('analysis-loader');
+    const results = document.getElementById('analysis-results');
+    const news = document.getElementById('news-results');
+    
+    loader.style.display = 'block';
+    results.innerHTML = '';
+    news.innerHTML = '';
+    
+    try {
+        const response = await fetch(`/api/trading/analysis/?ticker=${ticker}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Stock metrics
+            let html = '<div class="metrics-grid">';
+            for (let [key, value] of Object.entries(data.summary)) {
+                let valueClass = '';
+                if (key.includes('Score') || key.includes('Sentiment')) {
+                    valueClass = value > 0.1 ? 'positive' : value < -0.1 ? 'negative' : '';
+                }
+                if (key.includes('Return') || key.includes('Change')) {
+                    valueClass = value > 0 ? 'positive' : value < 0 ? 'negative' : '';
+                }
+                html += `
+                    <div class="metric-card">
+                        <div class="metric-label">${key}</div>
+                        <div class="metric-value ${valueClass}">${value}</div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            results.innerHTML = html;
+            
+            // News
+            if (data.news && data.news.length > 0) {
+                let newsHtml = '';
+                data.news.forEach(article => {
+                    const sentimentClass = article.sentiment > 0.1 ? 'news-bullish' : 
+                                          article.sentiment < -0.1 ? 'news-bearish' : 'news-neutral';
+                    newsHtml += `
+                        <div class="news-card ${sentimentClass}">
+                            <div class="news-title">${article.headline}</div>
+                            <div class="news-meta">${article.source} | ${new Date(article.published).toLocaleDateString()}</div>
+                            <p style="font-size: 13px; color: #475569;">${article.description}</p>
+                            <a href="${article.url}" target="_blank" class="news-link">Read More →</a>
+                        </div>
+                    `;
+                });
+                news.innerHTML = newsHtml;
+            }
+        }
+    } catch (error) {
+        results.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
+
+async function runMonteCarlo() {
+    const ticker = document.getElementById('mc-ticker').value;
+    const simulations = document.getElementById('mc-simulations').value;
+    const years = document.getElementById('mc-years').value;
+    const investment = parseFloat(document.getElementById('mc-investment').value);
+    
+    const loader = document.getElementById('mc-loader');
+    const results = document.getElementById('mc-results');
+    
+    loader.style.display = 'block';
+    results.innerHTML = '';
+    
+    try {
+        const response = await fetch(`/api/trading/monte-carlo/?ticker=${ticker}&simulations=${simulations}&years=${years}&investment=${investment}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Calculate dollar values
+            const lowerBound = investment * data.confidence_interval.lower;
+            const upperBound = investment * data.confidence_interval.upper;
+            const medianValue = investment * data.percentiles['50'];
+            
+            // Risk classification
+            const riskLevel = data.var_95 > investment * 0.2 ? 'high' : data.var_95 > investment * 0.1 ? 'medium' : 'low';
+            
+            let html = `
+                <div class="mc-results">
+                    <h4>📊 Simulation Results (${simulations} scenarios, ${years} years)</h4>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Initial Investment</div>
+                            <div class="metric-value">$${investment.toFixed(2)}</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-label">95% Confidence Interval</div>
+                            <div class="metric-value">$${lowerBound.toFixed(2)} - $${upperBound.toFixed(2)}</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-label">Median Outcome (50th %ile)</div>
+                            <div class="metric-value">$${medianValue.toFixed(2)}</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-label">Value at Risk (95%)</div>
+                            <div class="metric-value ${riskLevel === 'high' ? 'negative' : riskLevel === 'medium' ? '' : 'positive'}">
+                                $${data.var_95.toFixed(2)}
+                                <span style="font-size: 11px; display: block; color: #666;">
+                                    Risk: ${riskLevel.toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-label">Conditional VaR (95%)</div>
+                            <div class="metric-value negative">$${data.cvar_95.toFixed(2)}</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-label">10th Percentile (Worst Case)</div>
+                            <div class="metric-value negative">$${(investment * data.percentiles['10']).toFixed(2)}</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-label">90th Percentile (Best Case)</div>
+                            <div class="metric-value positive">$${(investment * data.percentiles['90']).toFixed(2)}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: #f1f5f9; border-radius: 5px;">
+                        <strong>📋 Interpretation:</strong><br>
+                        • There's a 95% chance your investment will be between <strong>$${lowerBound.toFixed(2)}</strong> and <strong>$${upperBound.toFixed(2)}</strong><br>
+                        • In the worst 5% of cases, you could lose up to <strong>$${data.var_95.toFixed(2)}</strong><br>
+                        • The median (typical) outcome is <strong>$${medianValue.toFixed(2)}</strong><br>
+                        • Your best case (90th percentile) is <strong>$${(investment * data.percentiles['90']).toFixed(2)}</strong>
+                    </div>
+                </div>
+            `;
+            results.innerHTML = html;
+        } else {
+            results.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+        }
+    } catch (error) {
+        results.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
+
+// Load default analysis on page load
+document.addEventListener('DOMContentLoaded', () => {
+    analyzeStock();
+});
+</script>
 {% endblock %}

@@ -4,6 +4,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
-    path('trading/', include('core.trading_urls')),  # New trading URLs
+    # ✅ CORRECT - include the main core.urls which already has all your trading paths
+    path('trading/', include('core.urls')),
 ]
 

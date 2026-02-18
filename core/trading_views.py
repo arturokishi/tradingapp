@@ -216,3 +216,69 @@ def api_trade_log(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+from .MCForecastTools import MCSimulation
+
+def api_monte_carlo(request):
+    """Run Monte Carlo simulation for a stock"""
+    ticker = request.GET.get('ticker', 'AAPL')
+    num_simulations = int(request.GET.get('simulations', 1000))
+    years = int(request.GET.get('years', 5))
+    investment = float(request.GET.get('investment', 10000))
+    
+    try:
+        # Get historical data
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=f"{max(years, 1)}y")
+        
+        if hist.empty or len(hist) < 252:
+            return JsonResponse({'success': False, 'error': 'Insufficient historical data'})
+        
+        # Calculate daily returns
+        returns = hist['Close'].pct_change().dropna()
+        
+        # Run Monte Carlo simulation
+        np.random.seed(42)  # For reproducibility
+        simulation_results = []
+        
+        for _ in range(num_simulations):
+            # Randomly sample returns with replacement
+            simulated_returns = np.random.choice(returns, size=252*years, replace=True)
+            # Calculate cumulative return
+            cumulative_return = np.prod(1 + simulated_returns)
+            simulation_results.append(cumulative_return)
+        
+        simulation_results = np.array(simulation_results)
+        
+        # Calculate statistics
+        percentiles = {
+            '10': np.percentile(simulation_results, 10),
+            '50': np.percentile(simulation_results, 50),
+            '90': np.percentile(simulation_results, 90)
+        }
+        
+        # Calculate VaR and CVaR
+        var_95 = np.percentile(simulation_results, 5)
+        cvar_95 = simulation_results[simulation_results <= var_95].mean()
+        
+        # Calculate confidence interval
+        ci_lower = np.percentile(simulation_results, 2.5)
+        ci_upper = np.percentile(simulation_results, 97.5)
+        
+        return JsonResponse({
+            'success': True,
+            'confidence_interval': {
+                'lower': float(ci_lower),
+                'upper': float(ci_upper)
+            },
+            'var_95': float(investment * (1 - var_95)),
+            'cvar_95': float(investment * (1 - cvar_95)),
+            'percentiles': {
+                '10': float(percentiles['10']),
+                '50': float(percentiles['50']),
+                '90': float(percentiles['90'])
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
