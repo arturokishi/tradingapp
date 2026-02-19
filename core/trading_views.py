@@ -283,3 +283,367 @@ def api_monte_carlo(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+
+def api_stock_backtest(request):
+    """Backtest stock trading strategies"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Extract parameters
+            ticker = data.get('ticker', 'AAPL')
+            strategy = data.get('strategy', 'trend_following')
+            entry_signal = data.get('entry_signal', 'rsi')
+            timeframe = data.get('timeframe', '1d')
+            position_type = data.get('position_type', 'long')
+            position_size = float(data.get('position_size', 10000))
+            stop_loss = float(data.get('stop_loss', 5)) / 100
+            take_profit = float(data.get('take_profit', 10)) / 100
+            max_hold = int(data.get('max_hold', 30))
+            
+            # Get historical data
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="2y")
+            
+            if hist.empty:
+                return JsonResponse({'success': False, 'error': 'No data available'})
+            
+            # Calculate indicators based on strategy
+            hist['returns'] = hist['Close'].pct_change()
+            hist['SMA20'] = hist['Close'].rolling(window=20).mean()
+            hist['SMA50'] = hist['Close'].rolling(window=50).mean()
+            
+            # RSI calculation
+            delta = hist['Close'].diff()
+            gain = delta.clip(lower=0).rolling(window=14).mean()
+            loss = (-delta.clip(upper=0)).rolling(window=14).mean()
+            rs = gain / loss
+            hist['RSI'] = 100 - (100 / (1 + rs))
+            
+            # Run backtest simulation
+            trades = []
+            in_position = False
+            entry_price = 0
+            entry_date = None
+            
+            for i in range(50, len(hist)):
+                date = hist.index[i]
+                price = hist['Close'].iloc[i]
+                
+                # Entry signals based on selection
+                signal = False
+                if entry_signal == 'rsi':
+                    if position_type == 'long':
+                        signal = hist['RSI'].iloc[i] < 30  # Oversold
+                    else:
+                        signal = hist['RSI'].iloc[i] > 70  # Overbought
+                elif entry_signal == 'sma':
+                    signal = (hist['SMA20'].iloc[i] > hist['SMA50'].iloc[i] and 
+                             hist['SMA20'].iloc[i-1] <= hist['SMA50'].iloc[i-1])
+                
+                if signal and not in_position:
+                    in_position = True
+                    entry_price = price
+                    entry_date = date
+                    
+                elif in_position:
+                    days_held = (date - entry_date).days
+                    return_pct = (price - entry_price) / entry_price
+                    
+                    # Exit conditions
+                    exit_signal = False
+                    exit_reason = ""
+                    
+                    if position_type == 'long':
+                        if return_pct <= -stop_loss:
+                            exit_signal = True
+                            exit_reason = "stop_loss"
+                        elif return_pct >= take_profit:
+                            exit_signal = True
+                            exit_reason = "take_profit"
+                    else:  # short
+                        if return_pct >= stop_loss:
+                            exit_signal = True
+                            exit_reason = "stop_loss"
+                        elif return_pct <= -take_profit:
+                            exit_signal = True
+                            exit_reason = "take_profit"
+                    
+                    if days_held >= max_hold:
+                        exit_signal = True
+                        exit_reason = "max_hold"
+                    
+                    if exit_signal:
+                        trades.append({
+                            'entry_date': entry_date.strftime('%Y-%m-%d'),
+                            'exit_date': date.strftime('%Y-%m-%d'),
+                            'direction': position_type,
+                            'entry_price': round(entry_price, 2),
+                            'exit_price': round(price, 2),
+                            'return_pct': round(return_pct, 3),
+                            'days_held': days_held,
+                            'exit_reason': exit_reason
+                        })
+                        in_position = False
+            
+            # Calculate metrics
+            if trades:
+                returns = [t['return_pct'] for t in trades]
+                winning_trades = [r for r in returns if r > 0]
+                
+                total_trades = len(trades)
+                win_rate = len(winning_trades) / total_trades if total_trades > 0 else 0
+                total_return = sum(returns)
+                avg_return = total_return / total_trades if total_trades > 0 else 0
+                
+                # Calculate max drawdown
+                cumulative = np.cumprod(1 + np.array(returns))
+                running_max = np.maximum.accumulate(cumulative)
+                drawdown = (cumulative - running_max) / running_max
+                max_drawdown = abs(min(drawdown)) if len(drawdown) > 0 else 0
+                
+                # Sharpe ratio (simplified)
+                sharpe = (avg_return / (np.std(returns) + 1e-6)) * np.sqrt(252) if len(returns) > 1 else 0
+                
+                # Profit factor
+                gross_profit = sum([r for r in returns if r > 0])
+                gross_loss = abs(sum([r for r in returns if r < 0]))
+                profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
+                
+                return JsonResponse({
+                    'success': True,
+                    'total_trades': total_trades,
+                    'win_rate': round(win_rate, 3),
+                    'total_return': round(total_return, 3),
+                    'avg_return': round(avg_return, 3),
+                    'sharpe_ratio': round(sharpe, 2),
+                    'max_drawdown': round(max_drawdown, 3),
+                    'profit_factor': round(profit_factor, 2),
+                    'trades': trades[-20:]  # Last 20 trades
+                })
+            else:
+                return JsonResponse({'success': False, 'error': 'No trades generated'})
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+def api_options_backtest(request):
+    """Backtest options credit spreads"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Extract parameters
+            ticker = data.get('ticker', 'SPY')
+            option_type = data.get('option_type', 'put_credit')
+            entry_signal = data.get('entry_signal', 'rsi_oversold')
+            short_delta = float(data.get('short_delta', 0.30))
+            spread_width = float(data.get('spread_width', 5))
+            dte = int(data.get('dte', 30))
+            exit_dte = int(data.get('exit_dte', 5))
+            risk_per_trade = float(data.get('risk_per_trade', 500))
+            take_profit = float(data.get('take_profit', 50)) / 100
+            stop_loss = float(data.get('stop_loss', 200)) / 100
+            
+            # Get historical data
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="2y")
+            
+            if hist.empty:
+                return JsonResponse({'success': False, 'error': 'No data available'})
+            
+            # Calculate RSI for signals
+            delta = hist['Close'].diff()
+            gain = delta.clip(lower=0).rolling(window=14).mean()
+            loss = (-delta.clip(upper=0)).rolling(window=14).mean()
+            rs = gain / loss
+            hist['RSI'] = 100 - (100 / (1 + rs))
+            
+            # Simplified backtest - in reality you'd need options chain data
+            trades = []
+            
+            for i in range(50, len(hist) - dte):
+                date = hist.index[i]
+                price = hist['Close'].iloc[i]
+                
+                # Check entry signal
+                signal = False
+                if entry_signal == 'rsi_oversold' and option_type == 'put_credit':
+                    signal = hist['RSI'].iloc[i] < 30
+                elif entry_signal == 'rsi_overbought' and option_type == 'call_credit':
+                    signal = hist['RSI'].iloc[i] > 70
+                
+                if signal:
+                    # Simulated credit spread (simplified)
+                    # In reality, you'd need options pricing model
+                    credit = price * 0.02  # Simplified 2% credit
+                    max_risk = spread_width * 100 - credit
+                    
+                    # Simulate outcome based on price movement
+                    exit_idx = min(i + dte, len(hist) - 1)
+                    exit_price = hist['Close'].iloc[exit_idx]
+                    
+                    # Simplified P&L
+                    if option_type == 'put_credit':
+                        # Bullish - want price above short strike
+                        pnl = credit if exit_price >= price else -max_risk
+                    else:
+                        # Bearish - want price below short strike
+                        pnl = credit if exit_price <= price else -max_risk
+                    
+                    trades.append({
+                        'entry_date': date.strftime('%Y-%m-%d'),
+                        'type': option_type,
+                        'credit': round(credit, 2),
+                        'max_risk': round(max_risk, 2),
+                        'pnl': round(pnl, 2),
+                        'return_pct': round(pnl / max_risk, 3),
+                        'days_held': dte
+                    })
+            
+            # Calculate metrics
+            if trades:
+                pnls = [t['pnl'] for t in trades]
+                winning_trades = [p for p in pnls if p > 0]
+                
+                total_trades = len(trades)
+                win_rate = len(winning_trades) / total_trades if total_trades > 0 else 0
+                total_pnl = sum(pnls)
+                avg_return = total_pnl / total_trades if total_trades > 0 else 0
+                
+                # Calculate max drawdown
+                cumulative = np.cumsum(pnls)
+                running_max = np.maximum.accumulate(cumulative)
+                drawdown = cumulative - running_max
+                max_drawdown = abs(min(drawdown)) if len(drawdown) > 0 else 0
+                
+                # Sharpe ratio
+                sharpe = (avg_return / (np.std(pnls) + 1e-6)) * np.sqrt(252) if len(pnls) > 1 else 0
+                
+                return JsonResponse({
+                    'success': True,
+                    'total_trades': total_trades,
+                    'win_rate': round(win_rate, 3),
+                    'total_pnl': round(total_pnl, 2),
+                    'avg_return': round(avg_return, 2),
+                    'sharpe_ratio': round(sharpe, 2),
+                    'max_drawdown': round(max_drawdown, 2),
+                    'trades': trades[-20:]
+                })
+            else:
+                return JsonResponse({'success': False, 'error': 'No trades generated'})
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+def api_trade_log(request):
+    """Handle trade log operations"""
+    global trade_log
+    
+    # Initialize empty trade_log if it doesn't exist
+    if 'trade_log' not in globals() or trade_log.empty:
+        trade_log = pd.DataFrame(columns=[
+            "Date", "Ticker", "Position_Type", "Entry_Price", "Exit_Price",
+            "Quantity", "PnL", "PnL_Percent", "Hold_Days", "Strategy",
+            "Signal_Type", "Signal_Value", "Alpha_Score", "Market_State", "Notes"
+        ])
+    
+    action = request.GET.get('action', 'view')
+    
+    # Handle different actions
+    if action == 'view':
+        if trade_log.empty:
+            return JsonResponse({'success': True, 'trades': [], 'summary': None})
+        
+        # Convert trades to JSON-serializable format
+        trades = []
+        for _, row in trade_log.iterrows():
+            trade = {}
+            for col in trade_log.columns:
+                value = row[col]
+                if isinstance(value, (pd.Timestamp, datetime)):
+                    trade[col] = value.strftime('%Y-%m-%d %H:%M')
+                elif isinstance(value, (np.integer, np.floating, float, int)):
+                    trade[col] = float(value) if not pd.isna(value) else 0
+                else:
+                    trade[col] = str(value) if value is not None else ''
+            trades.append(trade)
+        
+        # Calculate summary statistics
+        summary = {
+            'Total Trades': len(trades),
+            'Total P&L': round(float(trade_log['PnL'].sum()), 2),
+            'Win Rate': round(float((trade_log['PnL'] > 0).mean() * 100), 1),
+            'Avg P&L': round(float(trade_log['PnL'].mean()), 2),
+            'Max Win': round(float(trade_log['PnL'].max()), 2),
+            'Max Loss': round(float(trade_log['PnL'].min()), 2)
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'trades': trades,
+            'summary': summary
+        })
+    
+    elif action == 'add' and request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Calculate P&L
+            entry = float(data.get('entry_price', 0))
+            exit_price = float(data.get('exit_price', 0))
+            quantity = float(data.get('quantity', 0))
+            position_type = data.get('position_type', 'LONG')
+            
+            pnl = (exit_price - entry) * quantity
+            if position_type == 'SHORT':
+                pnl = -pnl
+            
+            pnl_percent = ((exit_price - entry) / entry) * 100 if entry != 0 else 0
+            if position_type == 'SHORT':
+                pnl_percent = -pnl_percent
+            
+            # Create new trade
+            new_trade = {
+                "Date": datetime.now(),
+                "Ticker": data.get('ticker', ''),
+                "Position_Type": position_type,
+                "Entry_Price": round(entry, 2),
+                "Exit_Price": round(exit_price, 2),
+                "Quantity": quantity,
+                "PnL": round(pnl, 2),
+                "PnL_Percent": round(pnl_percent, 2),
+                "Hold_Days": int(data.get('hold_days', 0)),
+                "Strategy": data.get('strategy', 'Manual'),
+                "Signal_Type": data.get('signal_type', 'Manual'),
+                "Signal_Value": float(data.get('signal_value', 0)),
+                "Alpha_Score": float(data.get('alpha_score', 0)),
+                "Market_State": data.get('market_state', 'UNKNOWN'),
+                "Notes": data.get('notes', '')
+            }
+            
+            # Add to trade_log
+            trade_log = pd.concat([trade_log, pd.DataFrame([new_trade])], ignore_index=True)
+            
+            return JsonResponse({'success': True, 'message': 'Trade added successfully'})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    elif action == 'clear':
+        if request.method == 'POST':
+            trade_log = pd.DataFrame(columns=trade_log.columns)
+            return JsonResponse({'success': True, 'message': 'Trade log cleared'})
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
+    elif action == 'export':
+        # Return CSV data
+        csv_data = trade_log.to_csv(index=False)
+        return HttpResponse(csv_data, content_type='text/csv')
+    
+    return JsonResponse({'success': False, 'error': 'Invalid action'})

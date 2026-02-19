@@ -275,7 +275,7 @@
     }
 </style>
 
-<a href="{% url 'base' %}" class="back-button">← Back to Home</a>
+<a href="/" class="back-button">← Back to Home</a>
 
 <h1>🚀 Advanced Trading Platform</h1>
 
@@ -573,11 +573,54 @@
 <div id="tab-trade-log" class="tab-content">
     <div class="card">
         <h3>📋 Trade Log</h3>
-        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-            <button onclick="viewTradeLog()" class="btn btn-info">View Trades</button>
-            <button onclick="exportTradeLog()" class="btn btn-warning">Export to CSV</button>
-            <button onclick="clearTradeLog()" class="btn btn-danger">Clear Log</button>
+        
+        <!-- Manual Trade Entry Form -->
+        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h4>➕ Add Manual Trade</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label>Ticker</label>
+                    <input type="text" id="manual-ticker" class="form-control" placeholder="AAPL" value="AAPL">
+                </div>
+                <div>
+                    <label>Position Type</label>
+                    <select id="manual-position" class="form-control">
+                        <option value="LONG">Long</option>
+                        <option value="SHORT">Short</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Entry Price ($)</label>
+                    <input type="number" id="manual-entry" class="form-control" value="100" step="0.01">
+                </div>
+                <div>
+                    <label>Exit Price ($)</label>
+                    <input type="number" id="manual-exit" class="form-control" value="105" step="0.01">
+                </div>
+                <div>
+                    <label>Quantity</label>
+                    <input type="number" id="manual-quantity" class="form-control" value="100" step="1">
+                </div>
+                <div>
+                    <label>Strategy</label>
+                    <input type="text" id="manual-strategy" class="form-control" value="Momentum">
+                </div>
+                <div>
+                    <label>Notes</label>
+                    <input type="text" id="manual-notes" class="form-control" placeholder="Optional">
+                </div>
+            </div>
+            <button onclick="addManualTrade()" class="btn btn-success" style="margin-top: 15px;">Add Trade</button>
         </div>
+        
+        <!-- Trade Log Controls -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button onclick="viewTradeLog()" class="btn btn-info">📊 View Trades</button>
+            <button onclick="exportTradeLog()" class="btn btn-warning">💾 Export to CSV</button>
+            <button onclick="clearTradeLog()" class="btn btn-danger">🗑️ Clear Log</button>
+        </div>
+        
+        <!-- Results Area -->
         <div id="trade-log-loader" class="loader" style="display: none;"></div>
         <div id="trade-log-summary"></div>
         <div id="trade-log-table"></div>
@@ -743,6 +786,7 @@ async function loadRanking() {
 }
 
 // Stock Backtest Function
+// Stock Backtest Function - UPDATED WITH CSRF
 async function runStockBacktest() {
     const loader = document.getElementById('backtest-loader');
     const results = document.getElementById('backtest-results');
@@ -772,9 +816,17 @@ async function runStockBacktest() {
     try {
         const response = await fetch('/api/trading/stock-backtest/', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken  // ✅ CSRF token added
+            },
             body: JSON.stringify(data)
         });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        
         const result = await response.json();
         
         if (result.success) {
@@ -836,12 +888,122 @@ async function runStockBacktest() {
             results.innerHTML = `<p class="negative">Error: ${result.error}</p>`;
         }
     } catch (error) {
-        results.innerHTML = `<p class="negative">Error: ${error}</p>`;
+        results.innerHTML = `<p class="negative">Error: ${error.message}</p>`;
     }
     
     loader.style.display = 'none';
 }
 
+// Options Backtest Function - UPDATED WITH CSRF
+async function runOptionsBacktest() {
+    const loader = document.getElementById('backtest-loader');
+    const results = document.getElementById('backtest-results');
+    
+    loader.style.display = 'block';
+    results.innerHTML = '';
+    
+    const data = {
+        type: 'options',
+        ticker: document.getElementById('options-ticker').value,
+        option_type: document.getElementById('options-type').value,
+        entry_signal: document.getElementById('options-entry-signal').value,
+        short_delta: parseFloat(document.getElementById('options-short-delta').value),
+        spread_width: parseFloat(document.getElementById('options-spread-width').value),
+        dte: parseInt(document.getElementById('options-dte').value),
+        exit_dte: parseInt(document.getElementById('options-exit-dte').value),
+        risk_per_trade: parseFloat(document.getElementById('options-risk').value),
+        take_profit: parseFloat(document.getElementById('options-take-profit').value),
+        stop_loss: parseFloat(document.getElementById('options-stop-loss').value),
+        filters: {
+            earnings: document.getElementById('options-filter-earnings').checked,
+            iv: document.getElementById('options-filter-iv').checked,
+            trend: document.getElementById('options-filter-trend').checked,
+            vix: document.getElementById('options-filter-vix').checked
+        }
+    };
+    
+    try {
+        const response = await fetch('/api/trading/options-backtest/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken  // ✅ CSRF token added
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            let html = `
+                <h4>🎲 Options Backtest Results</h4>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total Trades</div>
+                        <div class="metric-value">${result.total_trades}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Win Rate</div>
+                        <div class="metric-value positive">${(result.win_rate * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total P&L</div>
+                        <div class="metric-value ${result.total_pnl > 0 ? 'positive' : 'negative'}">
+                            $${result.total_pnl.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Avg Return/Trade</div>
+                        <div class="metric-value ${result.avg_return > 0 ? 'positive' : 'negative'}">
+                            $${result.avg_return.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Max Drawdown</div>
+                        <div class="metric-value negative">$${result.max_drawdown.toFixed(2)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Sharpe Ratio</div>
+                        <div class="metric-value">${result.sharpe_ratio.toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+            
+            if (result.trades && result.trades.length > 0) {
+                html += '<h4>Recent Trades</h4><table class="data-table"><tr>';
+                html += '<th>Date</th><th>Type</th><th>Credit</th><th>P&L</th><th>Return %</th><th>Days Held</th>';
+                html += '</tr>';
+                
+                result.trades.slice(0, 10).forEach(trade => {
+                    const pnlClass = trade.pnl > 0 ? 'positive' : 'negative';
+                    html += `
+                        <tr>
+                            <td>${trade.entry_date}</td>
+                            <td>${trade.type}</td>
+                            <td>$${trade.credit.toFixed(2)}</td>
+                            <td class="${pnlClass}">$${trade.pnl.toFixed(2)}</td>
+                            <td class="${pnlClass}">${(trade.return_pct * 100).toFixed(1)}%</td>
+                            <td>${trade.days_held}</td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+            }
+            
+            results.innerHTML = html;
+        } else {
+            results.innerHTML = `<p class="negative">Error: ${result.error}</p>`;
+        }
+    } catch (error) {
+        results.innerHTML = `<p class="negative">Error: ${error.message}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
 // Options Backtest Function
 async function runOptionsBacktest() {
     const loader = document.getElementById('backtest-loader');
@@ -973,11 +1135,81 @@ async function analyzeIV() {
     loader.style.display = 'none';
 }
 
-// Trade Log functions
+// ============================================
+// TRADE LOG FUNCTIONS - CLEAN VERSION
+// ============================================
+
+// Add manual trade
+async function addManualTrade() {
+    // Get form elements
+    const ticker = document.getElementById('manual-ticker');
+    const position = document.getElementById('manual-position');
+    const entry = document.getElementById('manual-entry');
+    const exit = document.getElementById('manual-exit');
+    const quantity = document.getElementById('manual-quantity');
+    const strategy = document.getElementById('manual-strategy');
+    const notes = document.getElementById('manual-notes');
+    
+    // Validate elements exist
+    if (!ticker || !position || !entry || !exit || !quantity || !strategy) {
+        alert('Error: Form elements not found');
+        return;
+    }
+    
+    const data = {
+        ticker: ticker.value,
+        position_type: position.value,
+        entry_price: parseFloat(entry.value),
+        exit_price: parseFloat(exit.value),
+        quantity: parseFloat(quantity.value),
+        strategy: strategy.value,
+        notes: notes ? notes.value : ''
+    };
+    
+    try {
+        const response = await fetch('/api/trading/trade-log/?action=add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Clear form
+            if (entry) entry.value = '100';
+            if (exit) exit.value = '105';
+            if (quantity) quantity.value = '100';
+            if (notes) notes.value = '';
+            
+            // Refresh view
+            await viewTradeLog();
+            
+            // Show success message
+            alert('✅ Trade added successfully!');
+        } else {
+            alert('❌ Error: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Add trade error:', error);
+        alert('❌ Error adding trade: ' + error.message);
+    }
+}
+
+// View trade log
 async function viewTradeLog() {
     const loader = document.getElementById('trade-log-loader');
     const summary = document.getElementById('trade-log-summary');
     const table = document.getElementById('trade-log-table');
+    
+    // Check if elements exist
+    if (!loader || !summary || !table) {
+        console.error('Trade log elements not found');
+        return;
+    }
     
     loader.style.display = 'block';
     summary.innerHTML = '';
@@ -985,30 +1217,63 @@ async function viewTradeLog() {
     
     try {
         const response = await fetch('/api/trading/trade-log/?action=view');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
-            if (data.summary) {
-                let summaryHtml = '<h4>Trade Summary</h4><table class="data-table">';
+            // Display summary
+            if (data.summary && Object.keys(data.summary).length > 0) {
+                let summaryHtml = '<h4>📊 Trade Summary</h4><div class="metrics-grid">';
                 Object.entries(data.summary).forEach(([key, val]) => {
-                    summaryHtml += `<tr><td><strong>${key}</strong></td><td>${typeof val === 'number' ? val.toFixed(2) : val}</td></tr>`;
+                    let valueClass = '';
+                    if (key.includes('P&L') || key.includes('Win') || key.includes('Loss')) {
+                        valueClass = val > 0 ? 'positive' : val < 0 ? 'negative' : '';
+                    }
+                    summaryHtml += `
+                        <div class="metric-card">
+                            <div class="metric-label">${key}</div>
+                            <div class="metric-value ${valueClass}">${typeof val === 'number' ? val.toFixed(2) : val}</div>
+                        </div>
+                    `;
                 });
-                summaryHtml += '</table>';
+                summaryHtml += '</div>';
                 summary.innerHTML = summaryHtml;
+            } else {
+                summary.innerHTML = '<p style="text-align: center; padding: 20px;">No trades yet. Add a trade to get started.</p>';
             }
             
-            if (data.trades.length > 0) {
-                let tableHtml = '<h4>Recent Trades</h4><table class="data-table"><tr>';
-                Object.keys(data.trades[0]).forEach(key => {
-                    tableHtml += `<th>${key}</th>`;
+            // Display trades table
+            if (data.trades && data.trades.length > 0) {
+                let tableHtml = '<h4>📝 Recent Trades</h4><table class="data-table"><tr>';
+                
+                // Headers
+                const headers = Object.keys(data.trades[0]);
+                headers.forEach(key => {
+                    tableHtml += `<th>${key.replace(/_/g, ' ')}</th>`;
                 });
                 tableHtml += '</tr>';
+                
+                // Data rows
                 data.trades.slice(0, 20).forEach(trade => {
                     tableHtml += '<tr>';
-                    Object.values(trade).forEach(val => {
+                    headers.forEach(key => {
+                        let val = trade[key];
                         let className = '';
-                        if (val === 'LONG' || (typeof val === 'number' && val > 0)) className = 'positive';
-                        if (val === 'SHORT' || (typeof val === 'number' && val < 0)) className = 'negative';
+                        
+                        // Color coding for P&L columns
+                        if (key === 'PnL' || key === 'PnL_Percent') {
+                            className = val > 0 ? 'positive' : val < 0 ? 'negative' : '';
+                        }
+                        
+                        // Format numbers
+                        if (typeof val === 'number') {
+                            val = val.toFixed(2);
+                        }
+                        
                         tableHtml += `<td class="${className}">${val}</td>`;
                     });
                     tableHtml += '</tr>';
@@ -1018,29 +1283,96 @@ async function viewTradeLog() {
             }
         }
     } catch (error) {
-        table.innerHTML = `<p class="negative">Error: ${error}</p>`;
+        console.error('View trade log error:', error);
+        table.innerHTML = `<p class="negative">Error loading trades: ${error.message}</p>`;
+    } finally {
+        loader.style.display = 'none';
     }
-    
-    loader.style.display = 'none';
 }
 
+// Export trade log
 async function exportTradeLog() {
-    alert('Export functionality coming soon!');
+    try {
+        const response = await fetch('/api/trading/trade-log/?action=export');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trade_log_${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('❌ Error exporting: ' + error.message);
+    }
 }
 
+// Clear trade log
 async function clearTradeLog() {
-    if (confirm('Are you sure you want to clear the trade log?')) {
-        const response = await fetch('/api/trading/trade-log/?action=clear');
-        const data = await response.json();
-        if (data.success) {
-            viewTradeLog();
+    if (confirm('⚠️ Are you sure you want to clear ALL trades? This cannot be undone.')) {
+        try {
+            const response = await fetch('/api/trading/trade-log/?action=clear', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                await viewTradeLog();
+                alert('✅ Trade log cleared!');
+            } else {
+                alert('❌ Error: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Clear log error:', error);
+            alert('❌ Error clearing log: ' + error.message);
         }
     }
 }
+
+// Auto-load trade log when tab is switched to it
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if we're on the trade log tab
+    const activeTab = document.querySelector('.tab-button.active');
+    if (activeTab && activeTab.textContent.includes('Trade Log')) {
+        viewTradeLog();
+    }
+});
 
 // Auto-load watchlist on page load
 document.addEventListener('DOMContentLoaded', () => {
     refreshWatchlist();
 });
+
+// Get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
 </script>
 {% endblock %}
