@@ -10,6 +10,7 @@ from .trading_engine import (
 import json
 import pandas as pd
 import numpy as np
+import yfinance as yf
 from datetime import datetime
 
 # Initialize watchlist
@@ -252,31 +253,31 @@ def api_monte_carlo(request):
         
         # Calculate statistics
         percentiles = {
-            '10': np.percentile(simulation_results, 10),
-            '50': np.percentile(simulation_results, 50),
-            '90': np.percentile(simulation_results, 90)
+            '10': float(np.percentile(simulation_results, 10)),
+            '50': float(np.percentile(simulation_results, 50)),
+            '90': float(np.percentile(simulation_results, 90))
         }
         
         # Calculate VaR and CVaR
-        var_95 = np.percentile(simulation_results, 5)
-        cvar_95 = simulation_results[simulation_results <= var_95].mean()
+        var_95 = float(np.percentile(simulation_results, 5))
+        cvar_95 = float(simulation_results[simulation_results <= var_95].mean())
         
         # Calculate confidence interval
-        ci_lower = np.percentile(simulation_results, 2.5)
-        ci_upper = np.percentile(simulation_results, 97.5)
+        ci_lower = float(np.percentile(simulation_results, 2.5))
+        ci_upper = float(np.percentile(simulation_results, 97.5))
         
         return JsonResponse({
             'success': True,
             'confidence_interval': {
-                'lower': float(ci_lower),
-                'upper': float(ci_upper)
+                'lower': ci_lower,
+                'upper': ci_upper
             },
-            'var_95': float(investment * (1 - var_95)),
-            'cvar_95': float(investment * (1 - cvar_95)),
+            'var_95': round(investment * (1 - var_95), 2),
+            'cvar_95': round(investment * (1 - cvar_95), 2),
             'percentiles': {
-                '10': float(percentiles['10']),
-                '50': float(percentiles['50']),
-                '90': float(percentiles['90'])
+                '10': round(percentiles['10'], 4),
+                '50': round(percentiles['50'], 4),
+                '90': round(percentiles['90'], 4)
             }
         })
         

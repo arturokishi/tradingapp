@@ -1,8 +1,33 @@
 
+{% extends "core/base.html" %}
 {% load humanize %}
 
 {% block content %}
 <style>
+    /* Add back button style */
+    .back-button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #6b7280;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .back-button:hover {
+        background-color: #4b5563;
+    }
+    
+    .parameter-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: -5px;
+        margin-bottom: 5px;
+    }
+    
+    /* Rest of your existing styles */
     .analysis-container {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -30,6 +55,7 @@
         gap: 10px;
         margin-bottom: 20px;
         flex-wrap: wrap;
+        align-items: center;
     }
     
     .stock-selector select, .stock-selector input {
@@ -37,6 +63,7 @@
         border: 1px solid #ddd;
         border-radius: 5px;
         font-size: 14px;
+        flex: 1;
     }
     
     .stock-selector button {
@@ -47,10 +74,17 @@
         border-radius: 5px;
         cursor: pointer;
         font-weight: 600;
+        white-space: nowrap;
     }
     
     .stock-selector button:hover {
         background: #1d4ed8;
+    }
+    
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
     }
     
     .metrics-grid {
@@ -141,14 +175,10 @@
     .risk-high { color: #ef4444; font-weight: 600; }
     .risk-medium { color: #f59e0b; font-weight: 600; }
     .risk-low { color: #10b981; font-weight: 600; }
-    
-    .chart-container {
-        margin-top: 20px;
-        padding: 20px;
-        background: white;
-        border-radius: 8px;
-    }
 </style>
+
+<!-- Back Button to core.html -->
+<a href="{% url 'base' %}" class="back-button">← Back to Home</a>
 
 <div class="analysis-container">
     <!-- Stock Analysis Card -->
@@ -156,11 +186,14 @@
         <h3>📈 Stock Analysis</h3>
         
         <div class="stock-selector">
-            <select id="ticker" style="flex: 2;">
-                {% for ticker in universe %}
-                <option value="{{ ticker }}">{{ ticker }}</option>
-                {% endfor %}
-            </select>
+            <div style="flex: 2;">
+                <select id="ticker" style="width: 100%;">
+                    {% for ticker in universe %}
+                    <option value="{{ ticker }}">{{ ticker }}</option>
+                    {% endfor %}
+                </select>
+                <div class="parameter-label">Select stock ticker</div>
+            </div>
             <button onclick="analyzeStock()">Analyze</button>
         </div>
         
@@ -174,14 +207,30 @@
         <h3>🎲 Monte Carlo Simulation</h3>
         
         <div class="stock-selector">
-            <select id="mc-ticker" style="flex: 1;">
-                {% for ticker in universe %}
-                <option value="{{ ticker }}">{{ ticker }}</option>
-                {% endfor %}
-            </select>
-            <input type="number" id="mc-simulations" placeholder="Simulations" value="1000" style="flex: 1;">
-            <input type="number" id="mc-years" placeholder="Years" value="5" style="flex: 1;">
-            <input type="number" id="mc-investment" placeholder="Investment ($)" value="10000" style="flex: 1;">
+            <div style="flex: 1;">
+                <select id="mc-ticker" style="width: 100%;">
+                    {% for ticker in universe %}
+                    <option value="{{ ticker }}">{{ ticker }}</option>
+                    {% endfor %}
+                </select>
+                <div class="parameter-label">Stock ticker</div>
+            </div>
+            
+            <div style="flex: 1;">
+                <input type="number" id="mc-simulations" placeholder="1000" value="1000" style="width: 100%;">
+                <div class="parameter-label">Number of simulations (more = more accurate)</div>
+            </div>
+            
+            <div style="flex: 1;">
+                <input type="number" id="mc-years" placeholder="5" value="5" style="width: 100%;">
+                <div class="parameter-label">Years to simulate</div>
+            </div>
+            
+            <div style="flex: 1;">
+                <input type="number" id="mc-investment" placeholder="10000" value="10000" style="width: 100%;">
+                <div class="parameter-label">Initial investment ($)</div>
+            </div>
+            
             <button onclick="runMonteCarlo()">Run MC</button>
         </div>
         
@@ -248,7 +297,11 @@ async function analyzeStock() {
                     `;
                 });
                 news.innerHTML = newsHtml;
+            } else {
+                news.innerHTML = '<p>No recent news found.</p>';
             }
+        } else {
+            results.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
         }
     } catch (error) {
         results.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
@@ -284,7 +337,8 @@ async function runMonteCarlo() {
             
             let html = `
                 <div class="mc-results">
-                    <h4>📊 Simulation Results (${simulations} scenarios, ${years} years)</h4>
+                    <h4>📊 Simulation Results</h4>
+                    <p><strong>Parameters:</strong> ${ticker} | ${simulations} simulations | ${years} years | $${investment.toFixed(2)} investment</p>
                     
                     <div class="metrics-grid">
                         <div class="metric-card">
@@ -298,7 +352,7 @@ async function runMonteCarlo() {
                         </div>
                         
                         <div class="metric-card">
-                            <div class="metric-label">Median Outcome (50th %ile)</div>
+                            <div class="metric-label">Median Outcome</div>
                             <div class="metric-value">$${medianValue.toFixed(2)}</div>
                         </div>
                         
@@ -318,12 +372,12 @@ async function runMonteCarlo() {
                         </div>
                         
                         <div class="metric-card">
-                            <div class="metric-label">10th Percentile (Worst Case)</div>
+                            <div class="metric-label">10th Percentile</div>
                             <div class="metric-value negative">$${(investment * data.percentiles['10']).toFixed(2)}</div>
                         </div>
                         
                         <div class="metric-card">
-                            <div class="metric-label">90th Percentile (Best Case)</div>
+                            <div class="metric-label">90th Percentile</div>
                             <div class="metric-value positive">$${(investment * data.percentiles['90']).toFixed(2)}</div>
                         </div>
                     </div>
@@ -332,7 +386,7 @@ async function runMonteCarlo() {
                         <strong>📋 Interpretation:</strong><br>
                         • There's a 95% chance your investment will be between <strong>$${lowerBound.toFixed(2)}</strong> and <strong>$${upperBound.toFixed(2)}</strong><br>
                         • In the worst 5% of cases, you could lose up to <strong>$${data.var_95.toFixed(2)}</strong><br>
-                        • The median (typical) outcome is <strong>$${medianValue.toFixed(2)}</strong><br>
+                        • The median outcome is <strong>$${medianValue.toFixed(2)}</strong><br>
                         • Your best case (90th percentile) is <strong>$${(investment * data.percentiles['90']).toFixed(2)}</strong>
                     </div>
                 </div>

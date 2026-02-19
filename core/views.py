@@ -5,6 +5,8 @@ from django.shortcuts import render
 from .economic_utils import get_all_economic_data  # Import your new function
 from .services import get_market_news  # Your existing news function
 
+# trading_views.py - Add this import at the top
+import yfinance as yf
 
 from .services import (
     rank_stocks,
@@ -69,4 +71,21 @@ def home(request):
     return render(request, "core/base.html", {  # Changed from home.html to base.html
         'eco': eco_data,
         'news': news
+    })
+
+def analysis(request):
+    # Define your universe of stocks
+    universe = [
+        "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AMZN", "AVGO", "ORCL", "CRM", "ADBE",
+        "JPM", "BAC", "WFC", "GS", "MS", "V", "MA", "AXP",
+        "XOM", "CVX", "COP", "SLB", "OXY",
+        "CAT", "DE", "BA", "GE", "LMT", "RTX",
+        "TSLA", "HD", "LOW", "MCD", "NKE", "COST", "WMT",
+        "LLY", "JNJ", "UNH", "PFE", "MRK", "ABBV",
+        "AMD", "INTC", "QCOM", "TXN", "MU",
+        "DIS", "NFLX", "T", "VZ"
+    ]
+    
+    return render(request, "core/analysis.html", {
+        'universe': universe  # This passes the list to the template
     })
