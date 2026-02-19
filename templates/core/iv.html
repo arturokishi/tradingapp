@@ -1,0 +1,171 @@
+
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<style>
+/* Navbar styling */
+.navbar {
+    background-color: #111827;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 20px;
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.navbar a:hover {
+    color: #fbbf24;
+}
+
+.nav-button {
+    background-color: #fbbf24;
+    color: #1f2933 !important;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.nav-button:hover {
+    background-color: #f59e0b;
+    color: #1f2933 !important;
+}
+
+/* Card styling */
+.card {
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+th {
+    background-color: #111;
+    color: white;
+    padding: 10px;
+    text-align: center;
+    font-weight: 600;
+}
+
+td {
+    padding: 8px;
+    text-align: center;
+}
+
+tr:nth-child(even) {
+    background-color: #f5f5f5;
+}
+
+.pos {
+    color: #00b894;
+    font-weight: 600;
+}
+
+.neg {
+    color: #d63031;
+    font-weight: 600;
+}
+
+.rsi-high {
+    color: #d63031;
+    font-weight: 600;
+}
+
+.rsi-low {
+    color: #00b894;
+    font-weight: 600;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+</style>
+
+<!-- Full Navigation Bar -->
+<div class="navbar">
+    <div class="navbar-links">
+        <a href="{% url 'base' %}">Home</a>  <!-- This will go to '/' -->
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'analysis' %}">Analysis</a>
+        <a href="{% url 'ranking' %}">Ranking</a>
+        <a href="{% url 'backtest' %}">Backtest</a>
+        <a href="{% url 'iv' %}">IV Analysis</a>
+        <a href="{% url 'trade_log' %}">Trade Log</a>
+    </div>
+    <a href="/"  class="nav-button">🏠 Volver al Inicio</a>
+    
+</div>
+
+<!-- IV Analysis Tab -->
+<div id="tab-iv" class="tab-content">
+    <div class="card">
+        <h3>📊 IV Rank Analysis</h3>
+        <div class="form-group">
+            <label>Select Ticker</label>
+            <select id="iv-ticker" class="form-control">
+                {% for ticker in universe %}
+                <option value="{{ ticker }}">{{ ticker }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button onclick="analyzeIV()" class="btn btn-primary">Analyze IV</button>
+        <div id="iv-loader" class="loader" style="display: none;"></div>
+        <div id="iv-results"></div>
+    </div>
+</div>
+
+
+<script>
+
+// IV Analysis
+async function analyzeIV() {
+    const ticker = document.getElementById('iv-ticker').value;
+    const loader = document.getElementById('iv-loader');
+    const results = document.getElementById('iv-results');
+    
+    loader.style.display = 'block';
+    results.innerHTML = '';
+    
+    try {
+        const response = await fetch(`/api/trading/iv/?ticker=${ticker}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            let html = '<h4>IV Analysis</h4><table class="data-table">';
+            Object.entries(data.iv_info).forEach(([key, val]) => {
+                html += `<tr><td><strong>${key}</strong></td><td>${val}</td></tr>`;
+            });
+            html += '</table>';
+            results.innerHTML = html;
+        }
+    } catch (error) {
+        results.innerHTML = `<p class="negative">Error: ${error}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
+
+</script>
+
+{% endblock %}

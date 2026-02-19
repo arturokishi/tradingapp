@@ -4,38 +4,8 @@
 
 {% block content %}
 <style>
-    /* Add back button style */
-    .back-button {
-        display: inline-block;
-        padding: 10px 20px;
-        background-color: #6b7280;
-        color: white;
-        text-decoration: none;
-        border-radius: 5px;
-        margin-bottom: 20px;
-        font-weight: 600;
-    }
-    
-    .back-button:hover {
-        background-color: #4b5563;
-    }
-    
-    .parameter-label {
-        font-size: 12px;
-        color: #64748b;
-        margin-top: -5px;
-        margin-bottom: 5px;
-    }
-    
-    /* Rest of your existing styles */
-    .analysis-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        padding: 20px;
-    }
-    
-    .analysis-card {
+    /* Card styling - matching dashboard */
+    .card {
         background: white;
         padding: 20px;
         border-radius: 10px;
@@ -43,50 +13,103 @@
         margin-bottom: 20px;
     }
     
-    .analysis-card h3 {
+    .card h3 {
         margin-top: 0;
         color: #1e293b;
         border-bottom: 2px solid #fbbf24;
         padding-bottom: 10px;
+        margin-bottom: 20px;
     }
     
+    /* Analysis container */
+    .analysis-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 0;
+    }
+    
+    /* Form controls matching dashboard */
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        background: white;
+    }
+    
+    .form-control:focus {
+        border-color: #fbbf24;
+        outline: none;
+    }
+    
+    /* Button styling matching dashboard */
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary {
+        background: #2563eb;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #1d4ed8;
+    }
+    
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #059669;
+    }
+    
+    /* Stock selector styling */
     .stock-selector {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: flex-end;
     }
     
-    .stock-selector select, .stock-selector input {
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        font-size: 14px;
-        flex: 1;
+    .stock-selector > div {
+        min-width: 150px;
     }
     
     .stock-selector button {
-        background: #2563eb;
-        color: white;
+        background: #fbbf24;
+        color: #1f2933;
         border: none;
         padding: 10px 20px;
         border-radius: 5px;
         cursor: pointer;
         font-weight: 600;
         white-space: nowrap;
+        transition: all 0.3s;
     }
     
     .stock-selector button:hover {
-        background: #1d4ed8;
+        background: #f59e0b;
     }
     
-    .input-group {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
+    /* Parameter labels */
+    .parameter-label {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-top: 4px;
     }
     
+    /* Metrics grid */
     .metrics-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -99,6 +122,7 @@
         padding: 15px;
         border-radius: 8px;
         border-left: 4px solid #2563eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     
     .metric-label {
@@ -118,6 +142,7 @@
     .metric-value.positive { color: #10b981; }
     .metric-value.negative { color: #ef4444; }
     
+    /* News section */
     .news-section {
         grid-column: span 2;
     }
@@ -128,6 +153,11 @@
         border-radius: 8px;
         margin-bottom: 10px;
         border-left: 4px solid;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .news-card:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
     .news-bullish { border-left-color: #10b981; }
@@ -137,22 +167,30 @@
     .news-title {
         font-weight: 600;
         margin-bottom: 5px;
+        color: #1e293b;
     }
     
     .news-meta {
         font-size: 12px;
         color: #64748b;
+        margin-bottom: 8px;
     }
     
     .news-link {
         color: #2563eb;
         text-decoration: none;
         font-size: 12px;
+        font-weight: 500;
     }
     
+    .news-link:hover {
+        text-decoration: underline;
+    }
+    
+    /* Loading spinner */
     .loader {
         border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
+        border-top: 4px solid #fbbf24;
         border-radius: 50%;
         width: 40px;
         height: 40px;
@@ -165,36 +203,122 @@
         100% { transform: rotate(360deg); }
     }
     
+    /* MC Results */
     .mc-results {
         background: #f8fafc;
-        padding: 15px;
-        border-radius: 8px;
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+    
+    .mc-results h4 {
+        color: #1e293b;
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    
+    /* Table styling - matching dashboard */
+    table {
+        width: 100%;
+        border-collapse: collapse;
         margin-top: 15px;
     }
     
+    th {
+        background-color: #1e293b;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    td {
+        padding: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    tr:hover {
+        background-color: #f8fafc;
+    }
+    
+    /* Risk colors */
     .risk-high { color: #ef4444; font-weight: 600; }
     .risk-medium { color: #f59e0b; font-weight: 600; }
     .risk-low { color: #10b981; font-weight: 600; }
+
+    /* Navbar styling */
+.navbar {
+    background-color: #111827;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 20px;
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.navbar a:hover {
+    color: #fbbf24;
+}
+
+.nav-button {
+    background-color: #fbbf24;
+    color: #1f2933 !important;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.nav-button:hover {
+    background-color: #f59e0b;
+    color: #1f2933 !important;
+}
 </style>
 
-<!-- Back Button to core.html -->
-<a href="{% url 'base' %}" class="back-button">← Back to Home</a>
 
-<div class="analysis-container">
+
+<!-- Full Navigation Bar -->
+<div class="navbar">
+    <div class="navbar-links">
+        <a href="/">Home</a>
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/analysis/">Analysis</a>
+        <a href="/ranking/">Ranking</a>
+        <a href="/backtest/">Backtest</a>
+        <a href="/iv/">IV Analysis</a>
+        <a href="/trade-log/">Trade Log</a>
+        <a href="/trading/trading/" class="highlight">🚀 Trading Platform</a>  <!-- NEW -->
+    </div>
+    <a href="/" class="nav-button">🏠 Volver al Inicio</a>
+</div>
+
+
+<div class="container" style="padding: 20px;">
     <!-- Stock Analysis Card -->
-    <div class="analysis-card">
+    <div class="card">
         <h3>📈 Stock Analysis</h3>
         
         <div class="stock-selector">
             <div style="flex: 2;">
-                <select id="ticker" style="width: 100%;">
+                <select id="ticker" class="form-control">
                     {% for ticker in universe %}
                     <option value="{{ ticker }}">{{ ticker }}</option>
                     {% endfor %}
                 </select>
                 <div class="parameter-label">Select stock ticker</div>
             </div>
-            <button onclick="analyzeStock()">Analyze</button>
+            <button onclick="analyzeStock()">Analyze Stock</button>
         </div>
         
         <div id="analysis-loader" class="loader" style="display: none;"></div>
@@ -203,12 +327,12 @@
     </div>
     
     <!-- Monte Carlo Card -->
-    <div class="analysis-card">
+    <div class="card">
         <h3>🎲 Monte Carlo Simulation</h3>
         
         <div class="stock-selector">
             <div style="flex: 1;">
-                <select id="mc-ticker" style="width: 100%;">
+                <select id="mc-ticker" class="form-control">
                     {% for ticker in universe %}
                     <option value="{{ ticker }}">{{ ticker }}</option>
                     {% endfor %}
@@ -217,29 +341,29 @@
             </div>
             
             <div style="flex: 1;">
-                <input type="number" id="mc-simulations" placeholder="1000" value="1000" style="width: 100%;">
-                <div class="parameter-label">Number of simulations (more = more accurate)</div>
+                <input type="number" id="mc-simulations" class="form-control" value="1000" min="100" max="10000">
+                <div class="parameter-label">Number of simulations</div>
             </div>
             
             <div style="flex: 1;">
-                <input type="number" id="mc-years" placeholder="5" value="5" style="width: 100%;">
+                <input type="number" id="mc-years" class="form-control" value="5" min="1" max="30">
                 <div class="parameter-label">Years to simulate</div>
             </div>
             
             <div style="flex: 1;">
-                <input type="number" id="mc-investment" placeholder="10000" value="10000" style="width: 100%;">
+                <input type="number" id="mc-investment" class="form-control" value="10000" min="1000" step="1000">
                 <div class="parameter-label">Initial investment ($)</div>
             </div>
             
-            <button onclick="runMonteCarlo()">Run MC</button>
+            <button onclick="runMonteCarlo()">Run Simulation</button>
         </div>
         
         <div id="mc-loader" class="loader" style="display: none;"></div>
         <div id="mc-results"></div>
     </div>
     
-    <!-- News Section (spans both columns) -->
-    <div class="analysis-card news-section">
+    <!-- News Section -->
+    <div class="card news-section">
         <h3>📰 Recent News & Sentiment</h3>
         <div id="news-results"></div>
     </div>
@@ -291,20 +415,20 @@ async function analyzeStock() {
                         <div class="news-card ${sentimentClass}">
                             <div class="news-title">${article.headline}</div>
                             <div class="news-meta">${article.source} | ${new Date(article.published).toLocaleDateString()}</div>
-                            <p style="font-size: 13px; color: #475569;">${article.description}</p>
-                            <a href="${article.url}" target="_blank" class="news-link">Read More →</a>
+                            <p style="font-size: 13px; color: #475569; margin-bottom: 10px;">${article.description}</p>
+                            <a href="${article.url}" target="_blank" class="news-link">Read Full Article →</a>
                         </div>
                     `;
                 });
                 news.innerHTML = newsHtml;
             } else {
-                news.innerHTML = '<p>No recent news found.</p>';
+                news.innerHTML = '<p style="text-align: center; padding: 40px; color: #9ca3af;">No recent news found.</p>';
             }
         } else {
-            results.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+            results.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Error: ${data.error}</p>`;
         }
     } catch (error) {
-        results.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
+        results.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Error: ${error}</p>`;
     }
     
     loader.style.display = 'none';
@@ -338,7 +462,9 @@ async function runMonteCarlo() {
             let html = `
                 <div class="mc-results">
                     <h4>📊 Simulation Results</h4>
-                    <p><strong>Parameters:</strong> ${ticker} | ${simulations} simulations | ${years} years | $${investment.toFixed(2)} investment</p>
+                    <p style="color: #64748b; margin-bottom: 20px;">
+                        <strong>Parameters:</strong> ${ticker} | ${simulations} simulations | ${years} years | $${investment.toFixed(2)} investment
+                    </p>
                     
                     <div class="metrics-grid">
                         <div class="metric-card">
@@ -382,8 +508,8 @@ async function runMonteCarlo() {
                         </div>
                     </div>
                     
-                    <div style="margin-top: 15px; padding: 10px; background: #f1f5f9; border-radius: 5px;">
-                        <strong>📋 Interpretation:</strong><br>
+                    <div style="margin-top: 20px; padding: 15px; background: #f1f5f9; border-radius: 8px; color: #1e293b;">
+                        <strong style="display: block; margin-bottom: 10px;">📋 Interpretation:</strong>
                         • There's a 95% chance your investment will be between <strong>$${lowerBound.toFixed(2)}</strong> and <strong>$${upperBound.toFixed(2)}</strong><br>
                         • In the worst 5% of cases, you could lose up to <strong>$${data.var_95.toFixed(2)}</strong><br>
                         • The median outcome is <strong>$${medianValue.toFixed(2)}</strong><br>
@@ -393,10 +519,10 @@ async function runMonteCarlo() {
             `;
             results.innerHTML = html;
         } else {
-            results.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+            results.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Error: ${data.error}</p>`;
         }
     } catch (error) {
-        results.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
+        results.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Error: ${error}</p>`;
     }
     
     loader.style.display = 'none';

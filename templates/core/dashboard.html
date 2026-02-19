@@ -185,27 +185,64 @@ tr:nth-child(even) {
     </div>
 </div>
 
-<div class="card">
-    <h3>🏆 Momentum Ranking</h3>
-    <div class="table-container">
-    <table>
-        <tr>
-            <th>Ticker</th>
-            <th>Momentum</th>
-        </tr>
-        {% for stock in ranking %}
-        <tr>
-            <td><strong>{{ stock.ticker }}</strong></td>
-            <td>{{ stock.momentum|floatformat:4 }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="2">No ranking data available.</td>
-        </tr>
-        {% endfor %}
-    </table>
+
+
+
+<!-- Watchlist Tab -->
+<div id="tab-watchlist" class="tab-content active">
+    <div class="card">
+        <h3>📊 Market Watchlist</h3>
+        <button onclick="refreshWatchlist()" class="btn btn-primary">🔄 Refresh Data</button>
+        <div id="watchlist-loader" class="loader" style="display: none;"></div>
+        <div id="watchlist-table"></div>
     </div>
 </div>
 
+<script>
+// Watchlist functions
+async function refreshWatchlist() {
+    const loader = document.getElementById('watchlist-loader');
+    const table = document.getElementById('watchlist-table');
+    
+    loader.style.display = 'block';
+    table.innerHTML = '';
+    
+    try {
+        const response = await fetch('/api/trading/watchlist/');
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+            let html = '<table class="data-table"><tr>';
+            
+            // Headers
+            Object.keys(data.data[0]).forEach(key => {
+                html += `<th>${key}</th>`;
+            });
+            html += '</tr>';
+            
+            // Data rows
+            data.data.forEach(row => {
+                html += '<tr>';
+                Object.entries(row).forEach(([key, val]) => {
+                    let className = '';
+                    if (typeof val === 'number') {
+                        className = val > 0 ? 'positive' : val < 0 ? 'negative' : '';
+                    }
+                    html += `<td class="${className}">${typeof val === 'number' ? val.toFixed(2) : val}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</table>';
+            table.innerHTML = html;
+        } else {
+            table.innerHTML = '<p>No data available</p>';
+        }
+    } catch (error) {
+        table.innerHTML = `<p class="negative">Error: ${error}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
 
+</script>
 

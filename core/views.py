@@ -89,3 +89,49 @@ def analysis(request):
     return render(request, "core/analysis.html", {
         'universe': universe  # This passes the list to the template
     })
+
+
+def backtest(request):
+    # Define your universe of stocks
+    universe = [
+        "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AMZN", "AVGO", "ORCL", "CRM", "ADBE",
+        "JPM", "BAC", "WFC", "GS", "MS", "V", "MA", "AXP",
+        "XOM", "CVX", "COP", "SLB", "OXY",
+        "CAT", "DE", "BA", "GE", "LMT", "RTX",
+        "TSLA", "HD", "LOW", "MCD", "NKE", "COST", "WMT",
+        "LLY", "JNJ", "UNH", "PFE", "MRK", "ABBV",
+        "AMD", "INTC", "QCOM", "TXN", "MU",
+        "DIS", "NFLX", "T", "VZ"
+    ]
+    
+    return render(request, "core/backtest.html", {
+        'universe': universe  # This passes the list to the template
+    })
+
+
+def api_iv(request):
+    ticker = request.GET.get('ticker', 'AAPL')
+    
+    try:
+        iv_info = calculate_iv_rank(ticker)
+        iv_serializable = {k: float(v) for k, v in iv_info.items()}
+        return JsonResponse({'success': True, 'iv_info': iv_serializable})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    
+def iv(request):
+    """IV Analysis page"""
+    universe = [
+        "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AMZN", "AVGO", "ORCL", "CRM", "ADBE",
+        "JPM", "BAC", "WFC", "GS", "MS", "V", "MA", "AXP",
+        "XOM", "CVX", "COP", "SLB", "OXY",
+        "CAT", "DE", "BA", "GE", "LMT", "RTX",
+        "TSLA", "HD", "LOW", "MCD", "NKE", "COST", "WMT",
+        "LLY", "JNJ", "UNH", "PFE", "MRK", "ABBV",
+        "AMD", "INTC", "QCOM", "TXN", "MU",
+        "DIS", "NFLX", "T", "VZ", "SPY", "QQQ", "IWM"
+    ]
+    
+    return render(request, "core/iv.html", {
+        'universe': universe
+    })

@@ -1,0 +1,772 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<style>
+    /* Card styling - matching dashboard */
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .card h3 {
+        margin-top: 0;
+        color: #1e293b;
+        border-bottom: 2px solid #fbbf24;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    /* Sub-tabs styling */
+    .sub-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 10px;
+    }
+    
+    .sub-tab-button {
+        padding: 8px 16px;
+        background: none;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        color: #6b7280;
+        transition: all 0.3s;
+    }
+    
+    .sub-tab-button:hover {
+        color: #2563eb;
+        background: #f3f4f6;
+    }
+    
+    .sub-tab-button.active {
+        background: #2563eb;
+        color: white;
+    }
+    
+    .sub-tab-content {
+        display: none;
+    }
+    
+    .sub-tab-content.active {
+        display: block;
+    }
+    
+    /* Form controls matching dashboard */
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        background: white;
+        margin-top: 5px;
+    }
+    
+    .form-control:focus {
+        border-color: #fbbf24;
+        outline: none;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #4b5563;
+        font-size: 14px;
+    }
+    
+    /* Button styling matching dashboard */
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary {
+        background: #2563eb;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #1d4ed8;
+    }
+    
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #059669;
+    }
+    
+    .btn-info {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .btn-info:hover {
+        background: #2563eb;
+    }
+    
+    .btn-warning {
+        background: #f59e0b;
+        color: white;
+    }
+    
+    .btn-warning:hover {
+        background: #d97706;
+    }
+    
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+    
+    /* Metrics grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .metric-card {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #2563eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .metric-label {
+        font-size: 12px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .metric-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-top: 5px;
+    }
+    
+    .metric-value.positive { color: #10b981; }
+    .metric-value.negative { color: #ef4444; }
+    
+    /* Loading spinner */
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #fbbf24;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Table styling - matching dashboard */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    .data-table th {
+        background-color: #1e293b;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .data-table td {
+        padding: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .data-table tr:hover {
+        background-color: #f8fafc;
+    }
+    
+    /* Navbar styling */
+    .navbar {
+        background-color: #111827;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    
+    .navbar-links {
+        display: flex;
+        gap: 20px;
+    }
+    
+    .navbar a {
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 16px;
+    }
+    
+    .navbar a:hover {
+        color: #fbbf24;
+    }
+    
+    .nav-button {
+        background-color: #fbbf24;
+        color: #1f2933 !important;
+        padding: 8px 16px;
+        border-radius: 5px;
+        font-weight: 600;
+    }
+    
+    .nav-button:hover {
+        background-color: #f59e0b;
+        color: #1f2933 !important;
+    }
+    
+    .highlight {
+        background-color: #fbbf24;
+        color: #1f2933 !important;
+        padding: 8px 16px;
+        border-radius: 5px;
+    }
+    
+    details {
+        margin: 20px 0;
+    }
+    
+    summary {
+        font-weight: 600;
+        color: #4b5563;
+        cursor: pointer;
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 5px;
+    }
+    
+    summary:hover {
+        background: #f1f5f9;
+    }
+</style>
+
+<!-- Full Navigation Bar -->
+<div class="navbar">
+    <div class="navbar-links">
+        <a href="/">Home</a>
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/analysis/">Analysis</a>
+        <a href="/ranking/">Ranking</a>
+        <a href="/backtest/">Backtest</a>
+        <a href="/iv/">IV Analysis</a>
+        <a href="/trade-log/">Trade Log</a>
+        
+    </div>
+    <a href="/" class="nav-button">🏠 Volver al Inicio</a>
+</div>
+
+<!-- Backtest Tab -->
+<div class="card">
+    <h3>🧪 Backtest Strategies</h3>
+    
+    <!-- Sub-tabs for Stock vs Options -->
+    <div class="sub-tabs">
+        <button class="sub-tab-button active" onclick="switchSubTab('stock-backtest')">📈 Stock Strategies</button>
+        <button class="sub-tab-button" onclick="switchSubTab('options-backtest')">🎲 Options Credit Spreads</button>
+    </div>
+    
+    <!-- Stock Backtest Sub-tab -->
+    <div id="subtab-stock-backtest" class="sub-tab-content active">
+        <h4>Stock Trading Strategies</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Left Column - Strategy Parameters -->
+            <div>
+                <div class="form-group">
+                    <label>Ticker</label>
+                    <select id="stock-ticker" class="form-control">
+                        {% for ticker in universe %}
+                        <option value="{{ ticker }}">{{ ticker }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Strategy Type</label>
+                    <select id="stock-strategy" class="form-control">
+                        <option value="trend_following">Trend Following</option>
+                        <option value="mean_reversion">Mean Reversion</option>
+                        <option value="breakout">Breakout</option>
+                        <option value="momentum">Momentum</option>
+                        <option value="volatility">Volatility Breakout</option>
+                        <option value="custom">Custom Signal</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Entry Signal</label>
+                    <select id="stock-entry-signal" class="form-control">
+                        <option value="rsi">RSI Oversold/Overbought</option>
+                        <option value="macd">MACD Crossover</option>
+                        <option value="sma">SMA Crossover (20/50)</option>
+                        <option value="ema">EMA Crossover (9/21)</option>
+                        <option value="bb">Bollinger Bands</option>
+                        <option value="volume">Volume Spike</option>
+                        <option value="alpha">Alpha Score > 0.5</option>
+                        <option value="sentiment">News Sentiment > 0.2</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Timeframe</label>
+                    <select id="stock-timeframe" class="form-control">
+                        <option value="1d">Daily</option>
+                        <option value="1h">Hourly</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="5m">5 Minutes</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Right Column - Position Management -->
+            <div>
+                <div class="form-group">
+                    <label>Position Type</label>
+                    <select id="stock-position-type" class="form-control">
+                        <option value="long">Long Only</option>
+                        <option value="short">Short Only</option>
+                        <option value="both">Both (Long/Short)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Position Size ($)</label>
+                    <input type="number" id="stock-position-size" class="form-control" value="10000" min="1000" step="1000">
+                </div>
+                
+                <div class="form-group">
+                    <label>Stop Loss (%)</label>
+                    <input type="number" id="stock-stop-loss" class="form-control" value="5" min="1" max="20" step="0.5">
+                </div>
+                
+                <div class="form-group">
+                    <label>Take Profit (%)</label>
+                    <input type="number" id="stock-take-profit" class="form-control" value="10" min="2" max="50" step="0.5">
+                </div>
+                
+                <div class="form-group">
+                    <label>Max Hold Days</label>
+                    <input type="number" id="stock-max-hold" class="form-control" value="30" min="1" max="252">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Additional Filters -->
+        <details>
+            <summary>Advanced Filters</summary>
+            <div style="padding: 15px; background: #f8fafc; border-radius: 5px; margin-top: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label><input type="checkbox" id="stock-filter-volume"> Min Volume > 1M</label>
+                    <label><input type="checkbox" id="stock-filter-price"> Min Price > $5</label>
+                    <label><input type="checkbox" id="stock-filter-alpha"> Alpha Score > 0</label>
+                    <label><input type="checkbox" id="stock-filter-iv"> IV Percentile < 50</label>
+                </div>
+            </div>
+        </details>
+        
+        <button onclick="runStockBacktest()" class="btn btn-success" style="width: 100%; margin-top: 20px;">Run Stock Backtest</button>
+    </div>
+    
+    <!-- Options Backtest Sub-tab -->
+    <div id="subtab-options-backtest" class="sub-tab-content">
+        <h4>Credit Vertical Options</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Left Column - Strategy Parameters -->
+            <div>
+                <div class="form-group">
+                    <label>Underlying</label>
+                    <select id="options-ticker" class="form-control">
+                        {% for ticker in universe %}
+                        <option value="{{ ticker }}">{{ ticker }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Strategy Type</label>
+                    <select id="options-type" class="form-control">
+                        <option value="put_credit">Put Credit Spread (Bullish)</option>
+                        <option value="call_credit">Call Credit Spread (Bearish)</option>
+                        <option value="iron_condor">Iron Condor (Neutral)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Entry Signal</label>
+                    <select id="options-entry-signal" class="form-control">
+                        <option value="rsi_oversold">RSI Oversold (<30)</option>
+                        <option value="rsi_overbought">RSI Overbought (>70)</option>
+                        <option value="sma_cross">SMA Crossover</option>
+                        <option value="iv_percentile">IV Percentile > 50</option>
+                        <option value="earnings">Pre-Earnings</option>
+                        <option value="support">At Support/Resistance</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Short Strike Delta</label>
+                    <input type="number" id="options-short-delta" class="form-control" value="0.30" step="0.05" min="0.1" max="0.5">
+                </div>
+            </div>
+            
+            <!-- Right Column - Trade Management -->
+            <div>
+                <div class="form-group">
+                    <label>Spread Width ($)</label>
+                    <input type="number" id="options-spread-width" class="form-control" value="5" step="1" min="1" max="50">
+                </div>
+                
+                <div class="form-group">
+                    <label>Days to Expiration</label>
+                    <input type="number" id="options-dte" class="form-control" value="30" min="5" max="90">
+                </div>
+                
+                <div class="form-group">
+                    <label>Exit at DTE</label>
+                    <input type="number" id="options-exit-dte" class="form-control" value="5" min="0" max="30">
+                </div>
+                
+                <div class="form-group">
+                    <label>Risk per Trade ($)</label>
+                    <input type="number" id="options-risk" class="form-control" value="500" min="100" step="100">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profit Targets -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0;">
+            <div class="form-group">
+                <label>Take Profit (% of credit)</label>
+                <input type="number" id="options-take-profit" class="form-control" value="50" min="10" max="100">
+            </div>
+            <div class="form-group">
+                <label>Stop Loss (% of credit)</label>
+                <input type="number" id="options-stop-loss" class="form-control" value="200" min="100" max="500">
+            </div>
+        </div>
+        
+        <!-- Advanced Filters -->
+        <details>
+            <summary>Advanced Filters</summary>
+            <div style="padding: 15px; background: #f8fafc; border-radius: 5px; margin-top: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label><input type="checkbox" id="options-filter-earnings"> Avoid earnings week</label>
+                    <label><input type="checkbox" id="options-filter-iv"> Require IV Rank > 30</label>
+                    <label><input type="checkbox" id="options-filter-trend"> Require trend confirmation</label>
+                    <label><input type="checkbox" id="options-filter-vix"> VIX < 25</label>
+                </div>
+            </div>
+        </details>
+        
+        <button onclick="runOptionsBacktest()" class="btn btn-success" style="width: 100%; margin-top: 20px;">Run Options Backtest</button>
+    </div>
+    
+    <!-- Results Area -->
+    <div id="backtest-loader" class="loader" style="display: none;"></div>
+    <div id="backtest-results" style="margin-top: 20px;"></div>
+</div>
+
+<script>
+// ============================================
+// CSRF TOKEN SETUP
+// ============================================
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// ============================================
+// SUB-TAB SWITCHING
+// ============================================
+function switchSubTab(subTabName) {
+    // Update button states
+    document.querySelectorAll('.sub-tab-button').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update content visibility
+    document.querySelectorAll('.sub-tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`subtab-${subTabName}`).classList.add('active');
+}
+
+// ============================================
+// STOCK BACKTEST FUNCTION
+// ============================================
+async function runStockBacktest() {
+    const loader = document.getElementById('backtest-loader');
+    const results = document.getElementById('backtest-results');
+    
+    loader.style.display = 'block';
+    results.innerHTML = '';
+    
+    const data = {
+        type: 'stock',
+        ticker: document.getElementById('stock-ticker').value,
+        strategy: document.getElementById('stock-strategy').value,
+        entry_signal: document.getElementById('stock-entry-signal').value,
+        timeframe: document.getElementById('stock-timeframe').value,
+        position_type: document.getElementById('stock-position-type').value,
+        position_size: parseFloat(document.getElementById('stock-position-size').value),
+        stop_loss: parseFloat(document.getElementById('stock-stop-loss').value) / 100,
+        take_profit: parseFloat(document.getElementById('stock-take-profit').value) / 100,
+        max_hold: parseInt(document.getElementById('stock-max-hold').value),
+        filters: {
+            volume: document.getElementById('stock-filter-volume').checked,
+            price: document.getElementById('stock-filter-price').checked,
+            alpha: document.getElementById('stock-filter-alpha').checked,
+            iv: document.getElementById('stock-filter-iv').checked
+        }
+    };
+    
+    try {
+        const response = await fetch('/api/trading/stock-backtest/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            let html = `
+                <h4>📈 Stock Backtest Results</h4>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total Trades</div>
+                        <div class="metric-value">${result.total_trades}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Win Rate</div>
+                        <div class="metric-value positive">${(result.win_rate * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total Return</div>
+                        <div class="metric-value ${result.total_return > 0 ? 'positive' : 'negative'}">
+                            ${(result.total_return * 100).toFixed(2)}%
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Sharpe Ratio</div>
+                        <div class="metric-value">${result.sharpe_ratio.toFixed(2)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Max Drawdown</div>
+                        <div class="metric-value negative">${(result.max_drawdown * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Profit Factor</div>
+                        <div class="metric-value">${result.profit_factor.toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+            
+            if (result.trades && result.trades.length > 0) {
+                html += '<h4>Recent Trades</h4><table class="data-table"><tr>';
+                html += '<th>Date</th><th>Direction</th><th>Entry</th><th>Exit</th><th>Return %</th><th>Days Held</th>';
+                html += '</tr>';
+                
+                result.trades.slice(0, 10).forEach(trade => {
+                    const returnClass = trade.return_pct > 0 ? 'positive' : 'negative';
+                    html += `
+                        <tr>
+                            <td>${trade.entry_date}</td>
+                            <td>${trade.direction}</td>
+                            <td>$${trade.entry_price.toFixed(2)}</td>
+                            <td>$${trade.exit_price.toFixed(2)}</td>
+                            <td class="${returnClass}">${(trade.return_pct * 100).toFixed(1)}%</td>
+                            <td>${trade.days_held}</td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+            }
+            
+            results.innerHTML = html;
+        } else {
+            results.innerHTML = `<p style="color: #ef4444; text-align: center;">Error: ${result.error}</p>`;
+        }
+    } catch (error) {
+        results.innerHTML = `<p style="color: #ef4444; text-align: center;">Error: ${error.message}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
+
+// ============================================
+// OPTIONS BACKTEST FUNCTION
+// ============================================
+async function runOptionsBacktest() {
+    const loader = document.getElementById('backtest-loader');
+    const results = document.getElementById('backtest-results');
+    
+    loader.style.display = 'block';
+    results.innerHTML = '';
+    
+    const data = {
+        type: 'options',
+        ticker: document.getElementById('options-ticker').value,
+        option_type: document.getElementById('options-type').value,
+        entry_signal: document.getElementById('options-entry-signal').value,
+        short_delta: parseFloat(document.getElementById('options-short-delta').value),
+        spread_width: parseFloat(document.getElementById('options-spread-width').value),
+        dte: parseInt(document.getElementById('options-dte').value),
+        exit_dte: parseInt(document.getElementById('options-exit-dte').value),
+        risk_per_trade: parseFloat(document.getElementById('options-risk').value),
+        take_profit: parseFloat(document.getElementById('options-take-profit').value) / 100,
+        stop_loss: parseFloat(document.getElementById('options-stop-loss').value) / 100,
+        filters: {
+            earnings: document.getElementById('options-filter-earnings').checked,
+            iv: document.getElementById('options-filter-iv').checked,
+            trend: document.getElementById('options-filter-trend').checked,
+            vix: document.getElementById('options-filter-vix').checked
+        }
+    };
+    
+    try {
+        const response = await fetch('/api/trading/options-backtest/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            let html = `
+                <h4>🎲 Options Backtest Results</h4>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total Trades</div>
+                        <div class="metric-value">${result.total_trades}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Win Rate</div>
+                        <div class="metric-value positive">${(result.win_rate * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total P&L</div>
+                        <div class="metric-value ${result.total_pnl > 0 ? 'positive' : 'negative'}">
+                            $${result.total_pnl.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Avg Return/Trade</div>
+                        <div class="metric-value ${result.avg_return > 0 ? 'positive' : 'negative'}">
+                            $${result.avg_return.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Max Drawdown</div>
+                        <div class="metric-value negative">$${result.max_drawdown.toFixed(2)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Sharpe Ratio</div>
+                        <div class="metric-value">${result.sharpe_ratio.toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+            
+            if (result.trades && result.trades.length > 0) {
+                html += '<h4>Recent Trades</h4><table class="data-table"><tr>';
+                html += '<th>Date</th><th>Type</th><th>Credit</th><th>P&L</th><th>Return %</th><th>Days Held</th>';
+                html += '</tr>';
+                
+                result.trades.slice(0, 10).forEach(trade => {
+                    const pnlClass = trade.pnl > 0 ? 'positive' : 'negative';
+                    html += `
+                        <tr>
+                            <td>${trade.entry_date}</td>
+                            <td>${trade.type}</td>
+                            <td>$${trade.credit.toFixed(2)}</td>
+                            <td class="${pnlClass}">$${trade.pnl.toFixed(2)}</td>
+                            <td class="${pnlClass}">${(trade.return_pct * 100).toFixed(1)}%</td>
+                            <td>${trade.days_held}</td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+            }
+            
+            results.innerHTML = html;
+        } else {
+            results.innerHTML = `<p style="color: #ef4444; text-align: center;">Error: ${result.error}</p>`;
+        }
+    } catch (error) {
+        results.innerHTML = `<p style="color: #ef4444; text-align: center;">Error: ${error.message}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
+
+// Initialize - set first sub-tab as active
+document.addEventListener('DOMContentLoaded', function() {
+    // Make sure the first sub-tab is active
+    document.getElementById('subtab-stock-backtest').classList.add('active');
+});
+</script>
+
+{% endblock %}

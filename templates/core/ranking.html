@@ -1,0 +1,371 @@
+
+
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<style>
+    /* Card styling - matching dashboard */
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .card h3 {
+        margin-top: 0;
+        color: #1e293b;
+        border-bottom: 2px solid #fbbf24;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    /* Analysis container */
+    .analysis-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 0;
+    }
+    
+    /* Form controls matching dashboard */
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        background: white;
+    }
+    
+    .form-control:focus {
+        border-color: #fbbf24;
+        outline: none;
+    }
+    
+    /* Button styling matching dashboard */
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary {
+        background: #2563eb;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #1d4ed8;
+    }
+    
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #059669;
+    }
+    
+    /* Stock selector styling */
+    .stock-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+    
+    .stock-selector > div {
+        min-width: 150px;
+    }
+    
+    .stock-selector button {
+        background: #fbbf24;
+        color: #1f2933;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: all 0.3s;
+    }
+    
+    .stock-selector button:hover {
+        background: #f59e0b;
+    }
+    
+    /* Parameter labels */
+    .parameter-label {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-top: 4px;
+    }
+    
+    /* Metrics grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .metric-card {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #2563eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .metric-label {
+        font-size: 12px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .metric-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-top: 5px;
+    }
+    
+    .metric-value.positive { color: #10b981; }
+    .metric-value.negative { color: #ef4444; }
+    
+    /* News section */
+    .news-section {
+        grid-column: span 2;
+    }
+    
+    .news-card {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 4px solid;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .news-card:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .news-bullish { border-left-color: #10b981; }
+    .news-bearish { border-left-color: #ef4444; }
+    .news-neutral { border-left-color: #fbbf24; }
+    
+    .news-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #1e293b;
+    }
+    
+    .news-meta {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+    
+    .news-link {
+        color: #2563eb;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .news-link:hover {
+        text-decoration: underline;
+    }
+    
+    /* Loading spinner */
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #fbbf24;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* MC Results */
+    .mc-results {
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+    
+    .mc-results h4 {
+        color: #1e293b;
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    
+    /* Table styling - matching dashboard */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    th {
+        background-color: #1e293b;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    td {
+        padding: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    tr:hover {
+        background-color: #f8fafc;
+    }
+    
+    /* Risk colors */
+    .risk-high { color: #ef4444; font-weight: 600; }
+    .risk-medium { color: #f59e0b; font-weight: 600; }
+    .risk-low { color: #10b981; font-weight: 600; }
+
+    /* Navbar styling */
+.navbar {
+    background-color: #111827;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 20px;
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.navbar a:hover {
+    color: #fbbf24;
+}
+
+.nav-button {
+    background-color: #fbbf24;
+    color: #1f2933 !important;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.nav-button:hover {
+    background-color: #f59e0b;
+    color: #1f2933 !important;
+}
+</style>
+
+<!-- Full Navigation Bar -->
+<div class="navbar">
+    <div class="navbar-links">
+        <a href="/">Home</a>
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/analysis/">Analysis</a>
+        <a href="/ranking/">Ranking</a>
+        <a href="/backtest/">Backtest</a>
+        <a href="/iv/">IV Analysis</a>
+        <a href="/trade-log/">Trade Log</a>
+        <a href="/trading/trading/" class="highlight">🚀 Trading Platform</a>  <!-- NEW -->
+    </div>
+    <a href="/" class="nav-button">🏠 Volver al Inicio</a>
+</div>
+
+<!-- Ranking Tab -->
+<div id="tab-ranking" class="tab-content">
+    <div class="card">
+        <h3>🏆 Stock Ranking</h3>
+        <div class="form-group">
+            <label>Rank by Metric</label>
+            <select id="ranking-metric" class="form-control">
+                <option value="Alpha Score">Alpha Score</option>
+                <option value="News Sentiment">News Sentiment</option>
+                <option value="IV Rank %">IV Rank %</option>
+                <option value="Price">Price</option>
+                <option value="Market Cap ($B)">Market Cap</option>
+                <option value="Momentum">Momentum</option>
+                <option value="RSI">RSI</option>
+            </select>
+        </div>
+        <button onclick="loadRanking()" class="btn btn-primary">Load Ranking</button>
+        <div id="ranking-loader" class="loader" style="display: none;"></div>
+        <div id="ranking-table"></div>
+    </div>
+</div>
+
+<script>
+
+// Ranking function
+async function loadRanking() {
+    const metric = document.getElementById('ranking-metric').value;
+    const loader = document.getElementById('ranking-loader');
+    const table = document.getElementById('ranking-table');
+    
+    loader.style.display = 'block';
+    table.innerHTML = '';
+    
+    try {
+        const response = await fetch(`/api/trading/ranking/?metric=${metric}&limit=20`);
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+            let html = '<table class="data-table"><tr>';
+            
+            Object.keys(data.data[0]).forEach(key => {
+                html += `<th>${key}</th>`;
+            });
+            html += '</tr>';
+            
+            data.data.forEach(row => {
+                html += '<tr>';
+                Object.values(row).forEach(val => {
+                    let className = typeof val === 'number' && val > 0 ? 'positive' : 
+                                   typeof val === 'number' && val < 0 ? 'negative' : '';
+                    html += `<td class="${className}">${typeof val === 'number' ? val.toFixed(2) : val}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</table>';
+            table.innerHTML = html;
+        }
+    } catch (error) {
+        table.innerHTML = `<p class="negative">Error: ${error}</p>`;
+    }
+    
+    loader.style.display = 'none';
+}
+
+</script>
+{% endblock %}
