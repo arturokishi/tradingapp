@@ -1,22 +1,19 @@
 
 
 from pathlib import Path
+from decouple import config
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Alpaca API Settings
+ALPACA_API_KEY = config('ALPACA_API_KEY')
+ALPACA_SECRET_KEY = config('ALPACA_SECRET_KEY')
+ALPACA_PAPER_TRADE = config('ALPACA_PAPER_TRADE', default=True, cast=bool)
+
+# Django core settings - ALL from .env file
+SECRET_KEY = config('SECRET_KEY')  # <-- Now this reads from .env
+DEBUG = config('DEBUG', default=False, cast=bool)
+
+# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-cl0^%t3pws8metfq2zj=j14h(%s+gi-*nsr@lelgg@j3f+#6&n'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = []
 

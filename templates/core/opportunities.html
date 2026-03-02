@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vertical Spread Opportunities</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th { background: #1f2933; color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #ddd; }
+        tr:hover { background: #f9f9f9; }
+        .positive { color: green; }
+        .symbol-input { padding: 10px; font-size: 16px; margin: 20px 0; }
+        .button { padding: 10px 20px; background: #fbbf24; border: none; cursor: pointer; }
+        .button:hover { background: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Bull Put Spread Opportunities</h1>
+        
+        <form method="get">
+            <input type="text" name="symbol" value="{{ symbol }}" class="symbol-input" placeholder="Enter symbol (e.g., SPY)">
+            <button type="submit" class="button">Analyze</button>
+        </form>
+        
+        {% if opportunities %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Strategy</th>
+                        <th>Short Strike</th>
+                        <th>Long Strike</th>
+                        <th>Credit</th>
+                        <th>Max Risk</th>
+                        <th>ROI %</th>
+                        <th>Prob OTM %</th>
+                        <th>Delta</th>
+                        <th>Adj Return</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for opp in opportunities %}
+                    <tr>
+                        <td><strong>{{ opp.symbol }}</strong></td>
+                        <td>{{ opp.strategy }}</td>
+                        <td>${{ opp.short_strike|floatformat:2 }}</td>
+                        <td>${{ opp.long_strike|floatformat:2 }}</td>
+                        <td class="positive">${{ opp.credit_received|floatformat:2 }}</td>
+                        <td>${{ opp.max_risk|floatformat:0 }}</td>
+                        <td class="positive">{{ opp.roi_pct }}%</td>
+                        <td>{{ opp.probability_otm }}%</td>
+                        <td>{{ opp.short_delta }}</td>
+                        <td><strong>{{ opp.pop_adjusted_return }}%</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No opportunities found for {{ symbol }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

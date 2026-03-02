@@ -1,0 +1,13 @@
+# Alpaca Credentials
+ALPACA_API_KEY=PKYEAHJRCGGBVUTIRD2RMDBD46
+ALPACA_SECRET_KEY=yGarmC332k5KBmv9VVPubbmHh8awLLZmfjZUeUtmusN3D
+ALPACA_PAPER_TRADE=True
+
+# Django Settings
+SECRET_KEY=yGarmC332k5KBmv9VVPubbmHh8awLLZmfjZUeUtmusN3D
+DEBUG=True
+
+# Other APIs (add as needed)
+POLYGON_API_KEY=your_polygon_key_here
+
+

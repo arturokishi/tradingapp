@@ -2,7 +2,7 @@
 
 from django.urls import path
 from . import views
-from . import trading_views  # Add this line
+from . import trading_views
 
 urlpatterns = [
     # Existing paths
@@ -26,8 +26,15 @@ urlpatterns = [
     path('api/trading/iv/', trading_views.api_iv, name='api_trading_iv'),
     path('api/trading/trade-log/', trading_views.api_trade_log, name='api_trading_trade_log'),
     path('api/trading/monte-carlo/', trading_views.api_monte_carlo, name='api_trading_monte_carlo'),
-    path('api/trading/stock-backtest/', trading_views.api_stock_backtest, name='api_trading_stock_backtest'),  # ADD THIS
-    path('api/trading/options-backtest/', trading_views.api_options_backtest, name='api_trading_options_backtest'),  # ADD THIS
-
+    path('api/trading/stock-backtest/', trading_views.api_stock_backtest, name='api_trading_stock_backtest'),
+    path('api/trading/options-backtest/', trading_views.api_options_backtest, name='api_trading_options_backtest'),
+    
+    # Alpaca test and vertical spread opportunities
+    path('test-alpaca/', views.test_alpaca_connection, name='test_alpaca'),
+    path('api/options/', views.api_test_options, name='api_test_options'),
+    path('opportunities/', views.find_opportunities, name='opportunities'),
+    path('api/opportunities/', views.api_opportunities, name='api_opportunities'),
 ]
+
+
 
