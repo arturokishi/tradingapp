@@ -204,22 +204,87 @@ def api_test_options(request):
 # Make sure these already exist in your views.py
 # If not, add them too:
 def find_opportunities(request):
-    """View to display vertical spread opportunities"""
+    """View to display vertical spread opportunities with debugging"""
     try:
         from .vertical_analyzer import VerticalSpreadAnalyzer
+        from django.http import HttpResponse
+        import traceback
+        import json
+        
         analyzer = VerticalSpreadAnalyzer()
         symbol = request.GET.get('symbol', 'SPY')
-        opportunities = analyzer.find_bull_put_spreads(symbol)
+        symbol = symbol.upper()  # Force uppercase
         
-        # Create a styled HTML table
+        # Debug: Check Alpaca connection first
+        debug_info = []
+        debug_info.append(f"<h3>Debug Info for {symbol}:</h3>")
+        
+        # Check if we can get options chain with improved error handling
+        try:
+            from .alpaca_client import AlpacaService
+            alpaca = AlpacaService()
+            chain = alpaca.get_options_chain(symbol)
+            
+            if chain:
+                debug_info.append(f"✅ Got options chain for {symbol}")
+                debug_info.append(f"Underlying price: ${chain.underlying_price if chain.underlying_price else 'N/A'}")
+                debug_info.append(f"Expiration: {chain.expiration_date if chain.expiration_date else 'N/A'}")
+                
+                # Check if puts and calls exist
+                puts_count = len(chain.puts) if chain.puts else 0
+                calls_count = len(chain.calls) if chain.calls else 0
+                debug_info.append(f"Number of puts: {puts_count}")
+                debug_info.append(f"Number of calls: {calls_count}")
+                
+                # Show first few puts as sample if they exist
+                if puts_count > 0:
+                    debug_info.append("<h4>Sample puts (first 3):</h4>")
+                    for i, put in enumerate(chain.puts[:3]):
+                        bid = float(put.bid) if put.bid else 0
+                        ask = float(put.ask) if put.ask else 0
+                        delta = put.greeks.delta if put.greeks else 'N/A'
+                        debug_info.append(f"Strike: ${put.strike}, Bid: ${bid}, Ask: ${ask}, Delta: {delta}")
+                else:
+                    debug_info.append("❌ No put options found in chain")
+                    
+                # Check if there are options with bids
+                if puts_count > 0:
+                    has_bids = any(put.bid and float(put.bid) > 0 for put in chain.puts)
+                    debug_info.append(f"Puts with bids: {'✅ Yes' if has_bids else '❌ No'}")
+            else:
+                debug_info.append(f"❌ No options chain returned for {symbol}")
+                
+        except Exception as e:
+            debug_info.append(f"❌ Error fetching options: {str(e)}")
+            debug_info.append(f"Traceback: {traceback.format_exc().replace(chr(10), '<br>')}")
+        
+        # Now try to find spreads
+        debug_info.append("<h4>Finding spreads...</h4>")
+        try:
+            opportunities = analyzer.find_bull_put_spreads(symbol)
+            debug_info.append(f"Found {len(opportunities)} opportunities")
+            
+            # Log the first opportunity as sample if found
+            if opportunities:
+                debug_info.append("<h4>Sample opportunity (first):</h4>")
+                first = opportunities[0]
+                debug_info.append(f"Strike: {first['short_strike']:.2f}/{first['long_strike']:.2f}, Credit: ${first['credit_received']:.2f}, ROI: {first['roi_pct']}%")
+        except Exception as e:
+            debug_info.append(f"❌ Error finding spreads: {str(e)}")
+            debug_info.append(f"Traceback: {traceback.format_exc().replace(chr(10), '<br>')}")
+            opportunities = []
+        
+        # Build the HTML
         html = """
         <html>
         <head>
-            <title>Bull Put Opportunities</title>
+            <title>Debug: Bull Put Opportunities</title>
             <style>
                 body { font-family: Arial; padding: 20px; background: #f5f5f5; }
                 h1 { color: #333; }
-                table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                h3 { color: #555; margin-top: 20px; }
+                h4 { color: #666; margin-top: 15px; margin-bottom: 5px; }
+                table { width: 100%%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                 th { background: #1f2933; color: white; padding: 12px; text-align: left; }
                 td { padding: 12px; border-bottom: 1px solid #ddd; }
                 tr:hover { background: #f9f9f9; }
@@ -228,17 +293,29 @@ def find_opportunities(request):
                 .button { padding: 10px 20px; background: #fbbf24; border: none; cursor: pointer; font-weight: bold; }
                 .button:hover { background: #f59e0b; }
                 .container { max-width: 1200px; margin: 0 auto; }
+                .debug { background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-family: monospace; overflow-x: auto; }
+                .error { background: #fee; color: #c00; }
+                .success { background: #efe; color: #0a0; }
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>📊 Bull Put Opportunities for <span id="symbol">""" + symbol + """</span></h1>
+                <h1>📊 Bull Put Opportunities Debug</h1>
                 
                 <form method="get">
-                    <input type="text" name="symbol" value="""" + symbol + """" class="symbol-input" placeholder="Enter symbol (e.g., SPY)">
+                    <input type="text" name="symbol" value=\"""" + symbol + """\" class="symbol-input" placeholder="Enter symbol (e.g., SPY)">
                     <button type="submit" class="button">Analyze</button>
                 </form>
                 
+                <div class="debug">
+                    <h3>Debug Information:</h3>
+                    """ + "<br>".join(debug_info) + """
+                </div>
+        """
+        
+        if opportunities:
+            html += """
+                <h3>Top Opportunities:</h3>
                 <table>
                     <thead>
                         <tr>
@@ -253,10 +330,11 @@ def find_opportunities(request):
                         </tr>
                     </thead>
                     <tbody>
-        """
-        
-        for opp in opportunities[:15]:  # Show top 15
-            html += f"""
+            """
+            
+            for opp in opportunities[:15]:
+                iv_display = f"{opp['short_iv']:.1f}" if opp['short_iv'] else 'N/A'
+                html += f"""
                         <tr>
                             <td><strong>{opp['short_strike']:.2f}/{opp['long_strike']:.2f}</strong></td>
                             <td class="positive">${opp['credit_received']:.2f}</td>
@@ -264,26 +342,37 @@ def find_opportunities(request):
                             <td class="positive">{opp['roi_pct']}%</td>
                             <td>{opp['probability_otm']}%</td>
                             <td>{opp['short_delta']:.3f}</td>
-                            <td>{opp['short_iv'] if opp['short_iv'] else 'N/A'}</td>
+                            <td>{iv_display}</td>
                             <td><strong>{opp['pop_adjusted_return']}%</strong></td>
                         </tr>
-            """
-        
-        html += """
+                """
+            
+            html += """
                     </tbody>
                 </table>
+            """
+        else:
+            html += "<p style='color:red; font-size:18px;'>❌ No opportunities found. Check debug info above.</p>"
+        
+        html += """
                 <p style="margin-top:20px; color:#666;">
-                    <small>Sorted by Probability-Adjusted Return (best first)</small>
+                    <small>Debug mode - showing API response details</small>
+                </p>
+                <p>
+                    <a href="/opportunities/?symbol=SPY">Try SPY</a> | 
+                    <a href="/opportunities/?symbol=QQQ">Try QQQ</a> | 
+                    <a href="/opportunities/?symbol=AAPL">Try AAPL</a> | 
+                    <a href="/opportunities/?symbol=MSFT">Try MSFT</a>
                 </p>
             </div>
         </body>
         </html>
         """
         
-        from django.http import HttpResponse
         return HttpResponse(html)
         
     except Exception as e:
+        import traceback
         from django.http import HttpResponse
         return HttpResponse(f"""
         <html>
@@ -291,7 +380,8 @@ def find_opportunities(request):
         <body>
             <h1>Error Analyzing Opportunities</h1>
             <p style="color:red">{str(e)}</p>
-            <a href="/opportunities/?symbol=SPY">Try SPY instead</a>
+            <pre>{traceback.format_exc()}</pre>
+            <a href="/opportunities/?symbol=SPY">Try again</a>
         </body>
         </html>
         """)
@@ -303,6 +393,7 @@ def api_opportunities(request):
         from django.http import JsonResponse
         analyzer = VerticalSpreadAnalyzer()
         symbol = request.GET.get('symbol', 'SPY')
+        symbol = symbol.upper() 
         opportunities = analyzer.find_bull_put_spreads(symbol)
         
         return JsonResponse({
