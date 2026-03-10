@@ -1,66 +1,726 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vertical Spread Opportunities</title>
+    <title>Elice Capital - Trading Platform</title>
     <style>
-        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { color: #333; }
-        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th { background: #1f2933; color: white; padding: 12px; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #ddd; }
-        tr:hover { background: #f9f9f9; }
-        .positive { color: green; }
-        .symbol-input { padding: 10px; font-size: 16px; margin: 20px 0; }
-        .button { padding: 10px 20px; background: #fbbf24; border: none; cursor: pointer; }
-        .button:hover { background: #f59e0b; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        body {
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        /* Navigation */
+        .navbar {
+            background: #1f2933;
+            padding: 16px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-logo h2 {
+            color: #fbbf24;
+            font-size: 20px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 25px;
+        }
+        
+        .nav-links a {
+            color: #d1d5db;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover, .nav-links a.active {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .card-header h3 {
+            color: #1f2933;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .card-header .badge {
+            background: #fbbf24;
+            color: #1f2933;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* Account Summary */
+        .account-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            color: #1f2933;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .stat-change {
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        
+        .positive { color: #059669; }
+        .negative { color: #dc2626; }
+        
+        /* Main Content Area */
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        /* Opportunities Table */
+        .opportunities-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .search-box button {
+            padding: 12px 25px;
+            background: #fbbf24;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .search-box button:hover {
+            background: #f59e0b;
+        }
+        
+        .strategy-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #e5e7eb;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .tab.active {
+            background: #1f2933;
+            color: white;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        /* Trade Checklist */
+        .checklist-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+        
+        .checklist-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .checklist-item label {
+            flex: 1;
+            font-size: 14px;
+            color: #374151;
+        }
+        
+        .checklist-score {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .score-high {
+            color: #059669;
+        }
+        
+        .score-medium {
+            color: #fbbf24;
+        }
+        
+        .score-low {
+            color: #dc2626;
+        }
+        
+        /* Positions Table */
+        .positions-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .position-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .position-row:last-child {
+            border-bottom: none;
+        }
+        
+        .position-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .position-symbol {
+            font-weight: bold;
+            width: 60px;
+        }
+        
+        .position-details {
+            color: #6b7280;
+            font-size: 13px;
+        }
+        
+        .position-pnl {
+            font-weight: bold;
+        }
+        
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .metric-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric-label {
+            color: #6b7280;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            color: #1f2933;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .metric-sub {
+            color: #9ca3af;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        
+        /* Risk Gauge */
+        .risk-gauge {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .risk-fill {
+            height: 100%;
+            background: #fbbf24;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📊 Bull Put Spread Opportunities</h1>
-        
-        <form method="get">
-            <input type="text" name="symbol" value="{{ symbol }}" class="symbol-input" placeholder="Enter symbol (e.g., SPY)">
-            <button type="submit" class="button">Analyze</button>
-        </form>
-        
-        {% if opportunities %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Strategy</th>
-                        <th>Short Strike</th>
-                        <th>Long Strike</th>
-                        <th>Credit</th>
-                        <th>Max Risk</th>
-                        <th>ROI %</th>
-                        <th>Prob OTM %</th>
-                        <th>Delta</th>
-                        <th>Adj Return</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for opp in opportunities %}
-                    <tr>
-                        <td><strong>{{ opp.symbol }}</strong></td>
-                        <td>{{ opp.strategy }}</td>
-                        <td>${{ opp.short_strike|floatformat:2 }}</td>
-                        <td>${{ opp.long_strike|floatformat:2 }}</td>
-                        <td class="positive">${{ opp.credit_received|floatformat:2 }}</td>
-                        <td>${{ opp.max_risk|floatformat:0 }}</td>
-                        <td class="positive">{{ opp.roi_pct }}%</td>
-                        <td>{{ opp.probability_otm }}%</td>
-                        <td>{{ opp.short_delta }}</td>
-                        <td><strong>{{ opp.pop_adjusted_return }}%</strong></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No opportunities found for {{ symbol }}</p>
-        {% endif %}
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-logo">
+                <svg width="40" height="40" viewBox="0 0 1024 1024">
+                    <circle cx="512" cy="512" r="410" fill="none" stroke="#fbbf24" stroke-width="6"/>
+                    <circle cx="512" cy="512" r="398" fill="none" stroke="#b3b3b3" stroke-width="3"/>
+                    <text x="512" y="640" text-anchor="middle" font-size="64" fill="#fbbf24">Elice</text>
+                </svg>
+                <h2>Elice Capital</h2>
+            </div>
+            <div class="nav-links">
+                <a href="#" class="active">Dashboard</a>
+                <a href="#">Opportunities</a>
+                <a href="#">Positions</a>
+                <a href="#">Analysis</a>
+                <a href="#">Backtest</a>
+                <a href="#">Risk</a>
+            </div>
+        </nav>
+
+        <!-- Account Summary -->
+        <div class="account-summary">
+            <div class="stat-box">
+                <div class="stat-label">Account Equity</div>
+                <div class="stat-value">$124,567</div>
+                <div class="stat-change positive">+2.3% today</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Buying Power</div>
+                <div class="stat-value">$89,234</div>
+                <div class="stat-change">Available: $45,678</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Open Positions</div>
+                <div class="stat-value">12</div>
+                <div class="stat-change positive">+3 this week</div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- IV Rank Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📈 IV Rank Screener</h3>
+                    <span class="badge">High IV</span>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">SPY</div>
+                        <div class="metric-value">67%</div>
+                        <div class="metric-sub">IV Rank</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">QQQ</div>
+                        <div class="metric-value">72%</div>
+                        <div class="metric-sub">IV Rank</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">IWM</div>
+                        <div class="metric-value">81%</div>
+                        <div class="metric-sub">IV Rank</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">VIX</div>
+                        <div class="metric-value">19.5</div>
+                        <div class="metric-sub">+2.1%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skew Monitor Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>⚖️ Skew Monitor</h3>
+                    <span class="badge">Live</span>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; padding: 8px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px;">
+                        <span><strong>SPY</strong> Put/Call Skew</span>
+                        <span style="color: #059669;">+23% (Puts expensive)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px;">
+                        <span><strong>QQQ</strong> Put/Call Skew</span>
+                        <span style="color: #059669;">+18% (Puts expensive)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px; background: #f9fafb; border-radius: 6px;">
+                        <span><strong>IWM</strong> Put/Call Skew</span>
+                        <span style="color: #dc2626;">-12% (Calls expensive)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Sentiment Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📊 Market Sentiment</h3>
+                    <span class="badge">SKEW: 148</span>
+                </div>
+                <div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>VIX</span>
+                            <span><strong>19.5</strong> (+2.1)</span>
+                        </div>
+                        <div class="risk-gauge">
+                            <div class="risk-fill" style="width: 65%;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>SKEW Index</span>
+                            <span><strong>148</strong> (High fear)</span>
+                        </div>
+                        <div class="risk-gauge">
+                            <div class="risk-fill" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Opportunities Section -->
+            <div class="opportunities-section">
+                <h3 style="margin-bottom: 20px;">🎯 Vertical Spread Opportunities</h3>
+                
+                <form method="get" class="search-box">
+                    <input type="text" name="symbol" value="{{ symbol }}" placeholder="Enter symbol (e.g., SPY, QQQ, IWM)">
+                    <button type="submit">Analyze</button>
+                </form>
+
+                <div class="strategy-tabs">
+                    <div class="tab active">Bull Puts</div>
+                    <div class="tab">Bear Calls</div>
+                    <div class="tab">Iron Condors</div>
+                    <div class="tab">All</div>
+                </div>
+
+                {% if opportunities %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Strategy</th>
+                            <th>Short/Long</th>
+                            <th>Credit</th>
+                            <th>Risk</th>
+                            <th>ROI %</th>
+                            <th>Prob</th>
+                            <th>Skew</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for opp in opportunities %}
+                        <tr>
+                            <td><strong>{{ opp.symbol }}</strong></td>
+                            <td>{{ opp.strategy }}</td>
+                            <td>${{ opp.short_strike|floatformat:2 }}/${{ opp.long_strike|floatformat:2 }}</td>
+                            <td class="positive">${{ opp.credit_received|floatformat:2 }}</td>
+                            <td>${{ opp.max_risk|floatformat:0 }}</td>
+                            <td class="positive">{{ opp.roi_pct }}%</td>
+                            <td>{{ opp.probability_otm }}%</td>
+                            <td>
+                                {% if opp.skew > 10 %}
+                                    <span style="color: #059669;">+{{ opp.skew }}%</span>
+                                {% else %}
+                                    <span style="color: #6b7280;">{{ opp.skew }}%</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ opp.pop_adjusted_return }}%</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                    <p style="text-align: center; color: #6b7280; padding: 40px;">No opportunities found for {{ symbol }}. Try another symbol or check back later.</p>
+                {% endif %}
+            </div>
+
+            <!-- Trade Checklist Section -->
+            <div class="checklist-section">
+                <h3 style="margin-bottom: 20px;">✅ Trade Checklist - {{ selected_symbol|default:"SPY" }}</h3>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span><strong>IV Rank:</strong> 67%</span>
+                        <span class="score-high">✓ PASS</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span><strong>Skew (Put/Call):</strong> +23% (Puts expensive)</span>
+                        <span class="score-high">✓ SELL PUTS</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span><strong>Price vs 50 MA:</strong> $445.32 / $432.18</span>
+                        <span class="score-high">✓ Above MA</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span><strong>RSI (14):</strong> 54.2</span>
+                        <span class="score-high">✓ Neutral</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span><strong>Support/Resistance:</strong> Support at $438</span>
+                        <span class="score-high">✓ Good</span>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb;">
+                        <div style="display: flex; justify-content: space-between; font-size: 18px;">
+                            <span><strong>Final Score:</strong></span>
+                            <span class="score-high"><strong>17/18</strong></span>
+                        </div>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <button style="background: #fbbf24; border: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; cursor: pointer;">✅ ENTER TRADE</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <label>1. IV Rank > 50%</label>
+                    <span class="checklist-score score-high">67%</span>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <label>2. Skew > 10% (Puts expensive)</label>
+                    <span class="checklist-score score-high">+23%</span>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <label>3. Price above 50-day MA (for puts)</label>
+                    <span class="checklist-score score-high">$445</span>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <label>4. RSI between 40-60</label>
+                    <span class="checklist-score score-high">54.2</span>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <label>5. Support below short strike</label>
+                    <span class="checklist-score score-high">$438</span>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" disabled>
+                    <label>6. 30-45 DTE</label>
+                    <span class="checklist-score score-medium">38 days</span>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" disabled>
+                    <label>7. Credit > $0.50</label>
+                    <span class="checklist-score score-high">$1.25</span>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" disabled>
+                    <label>8. Risk < 2% of account</label>
+                    <span class="checklist-score score-high">1.8%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Positions -->
+        <div class="positions-section">
+            <h3 style="margin-bottom: 20px;">📋 Open Positions</h3>
+            
+            <div class="position-row">
+                <div class="position-info">
+                    <span class="position-symbol">SPY</span>
+                    <span class="position-details">Bull Put 440/435 • 32 DTE • +$1.25 credit</span>
+                </div>
+                <div>
+                    <span class="position-pnl positive">+$87 (+35%)</span>
+                    <span style="color: #6b7280; margin-left: 20px;">Open P&L</span>
+                </div>
+            </div>
+            <div class="position-row">
+                <div class="position-info">
+                    <span class="position-symbol">QQQ</span>
+                    <span class="position-details">Bull Put 480/475 • 28 DTE • +$0.95 credit</span>
+                </div>
+                <div>
+                    <span class="position-pnl positive">+$42 (+22%)</span>
+                    <span style="color: #6b7280; margin-left: 20px;">Open P&L</span>
+                </div>
+            </div>
+            <div class="position-row">
+                <div class="position-info">
+                    <span class="position-symbol">IWM</span>
+                    <span class="position-details">Bear Call 210/215 • 35 DTE • +$1.10 credit</span>
+                </div>
+                <div>
+                    <span class="position-pnl negative">-$65 (-30%)</span>
+                    <span style="color: #6b7280; margin-left: 20px;">Open P&L</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h3>📊 Win Rate</h3>
+                </div>
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; font-weight: bold; color: #059669;">74%</div>
+                    <div style="color: #6b7280;">Last 50 trades</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3>📈 Profit Factor</h3>
+                </div>
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; font-weight: bold; color: #fbbf24;">1.45</div>
+                    <div style="color: #6b7280;">Gross profit / Gross loss</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3>📉 Max Drawdown</h3>
+                </div>
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; font-weight: bold; color: #dc2626;">-8.2%</div>
+                    <div style="color: #6b7280;">Current streak: +12 trades</div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                // Here you would load different strategies
+            });
+        });
+
+        // Auto-refresh data every 60 seconds
+        setTimeout(() => {
+            location.reload();
+        }, 60000);
+    </script>
 </body>
 </html>

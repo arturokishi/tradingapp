@@ -34,6 +34,11 @@ urlpatterns = [
     path('api/options/', views.api_test_options, name='api_test_options'),
     path('opportunities/', views.find_opportunities, name='opportunities'),
     path('api/opportunities/', views.api_opportunities, name='api_opportunities'),
+
+    path('trading/dashboard/', views.trading_dashboard, name='trading_dashboard'),
+    path('api/iv-screener/', views.api_iv_screener, name='api_iv_screener'),
+    path('api/skew-monitor/', views.api_skew_monitor, name='api_skew_monitor'),
+    path('api/trade-checklist/', views.api_trade_checklist, name='api_trade_checklist'),
 ]
 
 

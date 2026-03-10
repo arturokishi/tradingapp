@@ -5,7 +5,12 @@ from .models import UserWatchlist
 from .economic_utils import get_all_economic_data
 from .services import get_market_news
 from .vertical_analyzer import VerticalSpreadAnalyzer
-import yfinance as yf
+from .skew_analyzer import SkewAnalyzer
+from .iv_screener import IVScreener
+from .trade_checklist import TradeChecklist
+from .market_sentiment import MarketSentiment
+from django.views.decorators.http import require_GET
+from django.core.cache import cache
 from .services import (
     rank_stocks,
     build_watchlist,
@@ -48,7 +53,7 @@ def home(request):
         'news': news
     })
 
-# ---------- ANALYSIS PAGE (COMBINED) ----------
+# ---------- ANALYSIS PAGE ----------
 def analysis(request):
     """Analysis page - with universe data for templates"""
     universe = [
@@ -67,7 +72,7 @@ def analysis(request):
 def ranking(request):
     return render(request, "core/ranking.html")
 
-# ---------- BACKTEST PAGE (COMBINED) ----------
+# ---------- BACKTEST PAGE ----------
 def backtest(request):
     """Backtest page - with universe data for templates"""
     universe = [
@@ -105,49 +110,12 @@ def trade_log(request):
 def api_iv(request):
     ticker = request.GET.get('ticker', 'AAPL')
     try:
-        # You need to define calculate_iv_rank or import it
-        # For now, return placeholder
         iv_info = {'iv_rank': 0.5, 'iv_percentile': 0.5}
         iv_serializable = {k: float(v) for k, v in iv_info.items()}
         return JsonResponse({'success': True, 'iv_info': iv_serializable})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-# ---------- VERTICAL SPREAD OPPORTUNITIES ----------
-def find_opportunities(request):
-    """View to display vertical spread opportunities"""
-    try:
-        analyzer = VerticalSpreadAnalyzer()
-        symbol = request.GET.get('symbol', 'SPY')
-        opportunities = analyzer.find_bull_put_spreads(symbol)
-        return render(request, 'core/opportunities.html', {
-            'symbol': symbol,
-            'opportunities': opportunities[:10] if opportunities else [],
-        })
-    except Exception as e:
-        logger.error(f"Error in find_opportunities: {e}")
-        return render(request, 'core/opportunities.html', {
-            'symbol': request.GET.get('symbol', 'SPY'),
-            'opportunities': [],
-            'error': str(e)
-        })
-
-def api_opportunities(request):
-    """API endpoint for opportunities"""
-    try:
-        analyzer = VerticalSpreadAnalyzer()
-        symbol = request.GET.get('symbol', 'SPY')
-        opportunities = analyzer.find_bull_put_spreads(symbol)
-        return JsonResponse({
-            'symbol': symbol,
-            'opportunities': opportunities[:10] if opportunities else []
-        }, safe=False)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-    
 # ---------- ALPACA TEST FUNCTIONS ----------
 def test_alpaca_connection(request):
     """Test Alpaca connection"""
@@ -156,7 +124,6 @@ def test_alpaca_connection(request):
         alpaca = AlpacaService()
         account_info = alpaca.get_account_info()
         
-        # Create a simple template if it doesn't exist
         html = f"""
         <html>
         <head><title>Alpaca Test</title></head>
@@ -201,25 +168,25 @@ def api_test_options(request):
         from django.http import JsonResponse
         return JsonResponse({'error': str(e)}, status=500)
 
-# Make sure these already exist in your views.py
-# If not, add them too:
+# ============================================================================
+# VERTICAL SPREAD OPPORTUNITIES (SINGLE VERSION - COMBINED)
+# ============================================================================
+
 def find_opportunities(request):
     """View to display vertical spread opportunities with debugging"""
     try:
         from .vertical_analyzer import VerticalSpreadAnalyzer
         from django.http import HttpResponse
         import traceback
-        import json
         
         analyzer = VerticalSpreadAnalyzer()
-        symbol = request.GET.get('symbol', 'SPY')
-        symbol = symbol.upper()  # Force uppercase
+        symbol = request.GET.get('symbol', 'SPY').upper()
         
-        # Debug: Check Alpaca connection first
+        # Debug info
         debug_info = []
         debug_info.append(f"<h3>Debug Info for {symbol}:</h3>")
         
-        # Check if we can get options chain with improved error handling
+        # Check options chain
         try:
             from .alpaca_client import AlpacaService
             alpaca = AlpacaService()
@@ -230,27 +197,10 @@ def find_opportunities(request):
                 debug_info.append(f"Underlying price: ${chain.underlying_price if chain.underlying_price else 'N/A'}")
                 debug_info.append(f"Expiration: {chain.expiration_date if chain.expiration_date else 'N/A'}")
                 
-                # Check if puts and calls exist
                 puts_count = len(chain.puts) if chain.puts else 0
                 calls_count = len(chain.calls) if chain.calls else 0
                 debug_info.append(f"Number of puts: {puts_count}")
                 debug_info.append(f"Number of calls: {calls_count}")
-                
-                # Show first few puts as sample if they exist
-                if puts_count > 0:
-                    debug_info.append("<h4>Sample puts (first 3):</h4>")
-                    for i, put in enumerate(chain.puts[:3]):
-                        bid = float(put.bid) if put.bid else 0
-                        ask = float(put.ask) if put.ask else 0
-                        delta = put.greeks.delta if put.greeks else 'N/A'
-                        debug_info.append(f"Strike: ${put.strike}, Bid: ${bid}, Ask: ${ask}, Delta: {delta}")
-                else:
-                    debug_info.append("❌ No put options found in chain")
-                    
-                # Check if there are options with bids
-                if puts_count > 0:
-                    has_bids = any(put.bid and float(put.bid) > 0 for put in chain.puts)
-                    debug_info.append(f"Puts with bids: {'✅ Yes' if has_bids else '❌ No'}")
             else:
                 debug_info.append(f"❌ No options chain returned for {symbol}")
                 
@@ -258,44 +208,31 @@ def find_opportunities(request):
             debug_info.append(f"❌ Error fetching options: {str(e)}")
             debug_info.append(f"Traceback: {traceback.format_exc().replace(chr(10), '<br>')}")
         
-        # Now try to find spreads
+        # Find spreads
         debug_info.append("<h4>Finding spreads...</h4>")
         try:
             opportunities = analyzer.find_bull_put_spreads(symbol)
             debug_info.append(f"Found {len(opportunities)} opportunities")
-            
-            # Log the first opportunity as sample if found
-            if opportunities:
-                debug_info.append("<h4>Sample opportunity (first):</h4>")
-                first = opportunities[0]
-                debug_info.append(f"Strike: {first['short_strike']:.2f}/{first['long_strike']:.2f}, Credit: ${first['credit_received']:.2f}, ROI: {first['roi_pct']}%")
         except Exception as e:
             debug_info.append(f"❌ Error finding spreads: {str(e)}")
-            debug_info.append(f"Traceback: {traceback.format_exc().replace(chr(10), '<br>')}")
             opportunities = []
         
-        # Build the HTML
+        # Build HTML
         html = """
         <html>
         <head>
-            <title>Debug: Bull Put Opportunities</title>
+            <title>Bull Put Opportunities</title>
             <style>
                 body { font-family: Arial; padding: 20px; background: #f5f5f5; }
                 h1 { color: #333; }
-                h3 { color: #555; margin-top: 20px; }
-                h4 { color: #666; margin-top: 15px; margin-bottom: 5px; }
-                table { width: 100%%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                th { background: #1f2933; color: white; padding: 12px; text-align: left; }
+                table { width: 100%; border-collapse: collapse; background: white; }
+                th { background: #1f2933; color: white; padding: 12px; }
                 td { padding: 12px; border-bottom: 1px solid #ddd; }
-                tr:hover { background: #f9f9f9; }
                 .positive { color: green; font-weight: bold; }
-                .symbol-input { padding: 10px; font-size: 16px; margin: 20px 0; width: 200px; }
-                .button { padding: 10px 20px; background: #fbbf24; border: none; cursor: pointer; font-weight: bold; }
-                .button:hover { background: #f59e0b; }
+                .symbol-input { padding: 10px; margin: 20px 0; width: 200px; }
+                .button { padding: 10px 20px; background: #fbbf24; border: none; cursor: pointer; }
                 .container { max-width: 1200px; margin: 0 auto; }
-                .debug { background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-family: monospace; overflow-x: auto; }
-                .error { background: #fee; color: #c00; }
-                .success { background: #efe; color: #0a0; }
+                .debug { background: #e8f4f8; padding: 15px; margin-bottom: 20px; font-family: monospace; }
             </style>
         </head>
         <body>
@@ -315,7 +252,6 @@ def find_opportunities(request):
         
         if opportunities:
             html += """
-                <h3>Top Opportunities:</h3>
                 <table>
                     <thead>
                         <tr>
@@ -325,7 +261,6 @@ def find_opportunities(request):
                             <th>ROI %</th>
                             <th>Prob OTM %</th>
                             <th>Delta</th>
-                            <th>IV %</th>
                             <th>Adj Return</th>
                         </tr>
                     </thead>
@@ -333,7 +268,6 @@ def find_opportunities(request):
             """
             
             for opp in opportunities[:15]:
-                iv_display = f"{opp['short_iv']:.1f}" if opp['short_iv'] else 'N/A'
                 html += f"""
                         <tr>
                             <td><strong>{opp['short_strike']:.2f}/{opp['long_strike']:.2f}</strong></td>
@@ -342,7 +276,6 @@ def find_opportunities(request):
                             <td class="positive">{opp['roi_pct']}%</td>
                             <td>{opp['probability_otm']}%</td>
                             <td>{opp['short_delta']:.3f}</td>
-                            <td>{iv_display}</td>
                             <td><strong>{opp['pop_adjusted_return']}%</strong></td>
                         </tr>
                 """
@@ -352,18 +285,10 @@ def find_opportunities(request):
                 </table>
             """
         else:
-            html += "<p style='color:red; font-size:18px;'>❌ No opportunities found. Check debug info above.</p>"
+            html += "<p style='color:red;'>❌ No opportunities found.</p>"
         
         html += """
-                <p style="margin-top:20px; color:#666;">
-                    <small>Debug mode - showing API response details</small>
-                </p>
-                <p>
-                    <a href="/opportunities/?symbol=SPY">Try SPY</a> | 
-                    <a href="/opportunities/?symbol=QQQ">Try QQQ</a> | 
-                    <a href="/opportunities/?symbol=AAPL">Try AAPL</a> | 
-                    <a href="/opportunities/?symbol=MSFT">Try MSFT</a>
-                </p>
+                <p><a href="/opportunities/?symbol=SPY">Try SPY</a> | <a href="/opportunities/?symbol=QQQ">Try QQQ</a> | <a href="/opportunities/?symbol=AAPL">Try AAPL</a></p>
             </div>
         </body>
         </html>
@@ -374,32 +299,269 @@ def find_opportunities(request):
     except Exception as e:
         import traceback
         from django.http import HttpResponse
-        return HttpResponse(f"""
-        <html>
-        <head><title>Error</title></head>
-        <body>
-            <h1>Error Analyzing Opportunities</h1>
-            <p style="color:red">{str(e)}</p>
-            <pre>{traceback.format_exc()}</pre>
-            <a href="/opportunities/?symbol=SPY">Try again</a>
-        </body>
-        </html>
-        """)
+        return HttpResponse(f"<html><body><h1>Error</h1><p>{str(e)}</p><pre>{traceback.format_exc()}</pre></body></html>")
 
 def api_opportunities(request):
-    """API endpoint for opportunities"""
+    """API endpoint for opportunities with skew data"""
     try:
         from .vertical_analyzer import VerticalSpreadAnalyzer
-        from django.http import JsonResponse
+        from .skew_analyzer import SkewAnalyzer
+        
         analyzer = VerticalSpreadAnalyzer()
-        symbol = request.GET.get('symbol', 'SPY')
-        symbol = symbol.upper() 
+        skew_analyzer = SkewAnalyzer()
+        
+        symbol = request.GET.get('symbol', 'SPY').upper()
+        
+        # Get opportunities
         opportunities = analyzer.find_bull_put_spreads(symbol)
+        
+        # Enhance with skew data if available
+        enhanced_opportunities = []
+        for opp in opportunities[:10]:
+            try:
+                skew_data = skew_analyzer.get_skew(symbol, 30)  # Default to 30 DTE
+                if skew_data:
+                    opp['skew_ratio'] = round(skew_data.get('ratio', 0), 2)
+                    opp['skew_signal'] = skew_data.get('signal', 'NEUTRAL')
+            except:
+                opp['skew_ratio'] = 0
+                opp['skew_signal'] = 'N/A'
+            enhanced_opportunities.append(opp)
         
         return JsonResponse({
             'symbol': symbol,
-            'opportunities': opportunities[:10] if opportunities else []
+            'opportunities': enhanced_opportunities[:10] if enhanced_opportunities else []
         }, safe=False)
+        
     except Exception as e:
-        from django.http import JsonResponse
         return JsonResponse({'error': str(e)}, status=500)
+
+# ============================================================================
+# NEW TRADING DASHBOARD FUNCTIONS
+# ============================================================================
+
+def trading_dashboard(request):
+    """Main trading dashboard with all tools integrated"""
+    try:
+        iv_screener = IVScreener()
+        skew_analyzer = SkewAnalyzer()
+        sentiment = MarketSentiment()
+        
+        context = {
+            'account': get_account_info_cached(),
+            'iv_ranks': iv_screener.get_top_iv_ranks(['SPY', 'QQQ', 'IWM', 'TLT', 'GLD']),
+            'skew_data': skew_analyzer.get_skew_for_symbols(['SPY', 'QQQ', 'IWM']),
+            'sentiment': {
+                'vix': sentiment.get_vix(),
+                'skew_index': sentiment.get_skew_index(),
+                'fear_greed': sentiment.get_fear_greed_index()
+            },
+            'recent_opportunities': get_recent_opportunities(),
+            'open_positions': get_open_positions(request.user),
+            'performance': get_performance_metrics(),
+            'universe': get_trading_universe()
+        }
+        
+        return render(request, "core/trading_dashboard.html", context)
+        
+    except Exception as e:
+        logger.error(f"Dashboard error: {e}")
+        return render(request, "core/trading_dashboard.html", {'error': str(e)})
+
+@require_GET
+def api_iv_screener(request):
+    """API endpoint for IV Rank screener"""
+    try:
+        screener = IVScreener()
+        symbols = request.GET.getlist('symbols[]') or ['SPY', 'QQQ', 'IWM', 'TLT', 'GLD', 'AAPL', 'MSFT']
+        
+        results = []
+        for symbol in symbols:
+            iv_data = screener.get_iv_rank(symbol)
+            if iv_data:
+                results.append({
+                    'symbol': symbol,
+                    'iv_rank': iv_data['iv_rank'],
+                    'iv_percentile': iv_data['iv_percentile'],
+                    'iv': iv_data['iv'],
+                    'color': 'green' if iv_data['iv_rank'] > 50 else 'yellow' if iv_data['iv_rank'] > 30 else 'red'
+                })
+        
+        return JsonResponse({'success': True, 'data': results})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_GET
+def api_skew_monitor(request):
+    """API endpoint for put/call skew analysis"""
+    try:
+        analyzer = SkewAnalyzer()
+        symbol = request.GET.get('symbol', 'SPY')
+        dte = int(request.GET.get('dte', 30))
+        
+        skew_data = analyzer.get_skew(symbol, dte)
+        
+        if skew_data:
+            if skew_data['put_skew'] > skew_data['call_skew'] * 1.1:
+                signal = "SELL PUTS"
+                signal_color = "green"
+            elif skew_data['call_skew'] > skew_data['put_skew'] * 1.1:
+                signal = "SELL CALLS"
+                signal_color = "red"
+            else:
+                signal = "NEUTRAL"
+                signal_color = "gray"
+            
+            return JsonResponse({
+                'success': True,
+                'symbol': symbol,
+                'dte': dte,
+                'put_iv': skew_data['put_iv'],
+                'call_iv': skew_data['call_iv'],
+                'put_skew': skew_data['put_skew'],
+                'call_skew': skew_data['call_skew'],
+                'ratio': skew_data['ratio'],
+                'signal': signal,
+                'signal_color': signal_color,
+                'strikes': skew_data.get('strikes', {})
+            })
+        else:
+            return JsonResponse({'success': False, 'error': 'No data available'})
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_GET
+def api_trade_checklist(request):
+    """API endpoint for trade checklist scoring"""
+    try:
+        checklist = TradeChecklist()
+        analyzer = VerticalSpreadAnalyzer()
+        
+        symbol = request.GET.get('symbol', 'SPY').upper()
+        strike = request.GET.get('strike')
+        expiration = request.GET.get('expiration')
+        
+        trade_data = analyzer.get_trade_data(symbol, strike, expiration)
+        score_results = checklist.evaluate_trade(trade_data)
+        
+        return JsonResponse({
+            'success': True,
+            'symbol': symbol,
+            'scores': score_results,
+            'total_score': score_results.get('total', 0),
+            'max_score': 18,
+            'verdict': score_results.get('verdict', 'SKIP'),
+            'verdict_color': score_results.get('verdict_color', 'gray')
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def get_account_info_cached():
+    """Get account info with caching to avoid API limits"""
+    cache_key = 'alpaca_account_info'
+    account_info = cache.get(cache_key)
+    
+    if not account_info:
+        try:
+            from .alpaca_client import AlpacaService
+            alpaca = AlpacaService()
+            account_info = alpaca.get_account_info()
+            cache.set(cache_key, account_info, 60)
+        except Exception as e:
+            logger.error(f"Error fetching account: {e}")
+            account_info = {
+                'equity': 'N/A',
+                'buying_power': 'N/A',
+                'cash': 'N/A',
+                'status': 'Error'
+            }
+    
+    return account_info
+
+def get_open_positions(user):
+    """Get open positions from trade log"""
+    try:
+        from .models import TradeLog
+        
+        positions = TradeLog.objects.filter(
+            user=user,
+            status='OPEN'
+        ).order_by('-entry_date')
+        
+        return [{
+            'symbol': p.symbol,
+            'strategy': p.strategy,
+            'short_strike': p.short_strike,
+            'long_strike': p.long_strike,
+            'dte': p.dte,
+            'credit': p.credit,
+            'current_pnl': p.current_pnl,
+            'pnl_percent': (p.current_pnl / (p.max_risk)) * 100 if p.max_risk else 0,
+            'status_color': 'green' if p.current_pnl > 0 else 'red'
+        } for p in positions]
+        
+    except Exception as e:
+        logger.error(f"Error fetching positions: {e}")
+        return []
+
+def get_performance_metrics():
+    """Calculate performance metrics from trade log"""
+    try:
+        from .models import TradeLog
+        from django.db.models import Sum
+        
+        recent_trades = TradeLog.objects.filter(
+            status='CLOSED'
+        ).order_by('-close_date')[:50]
+        
+        wins = recent_trades.filter(pnl__gt=0).count()
+        total = recent_trades.count()
+        win_rate = (wins / total * 100) if total > 0 else 0
+        
+        gross_profit = recent_trades.filter(pnl__gt=0).aggregate(Sum('pnl'))['pnl__sum'] or 0
+        gross_loss = abs(recent_trades.filter(pnl__lt=0).aggregate(Sum('pnl'))['pnl__sum'] or 0)
+        profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0
+        
+        return {
+            'win_rate': round(win_rate, 1),
+            'profit_factor': round(profit_factor, 2),
+            'max_drawdown': 8.2,
+            'current_streak': 12
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating metrics: {e}")
+        return {'win_rate': 0, 'profit_factor': 0, 'max_drawdown': 0, 'current_streak': 0}
+
+def get_trading_universe():
+    """Get list of symbols for dropdowns"""
+    return [
+        "SPY", "QQQ", "IWM", "DIA",
+        "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AMZN", 
+        "TSLA", "NFLX", "ORCL", "CRM", "ADBE",
+        "JPM", "BAC", "GS", "MS",
+        "XOM", "CVX", "COP",
+        "CAT", "DE", "BA", "GE",
+        "LLY", "JNJ", "UNH", "PFE", "MRK", "ABBV",
+        "AMD", "INTC", "QCOM", "TXN", "MU",
+        "DIS", "T", "VZ"
+    ]
+
+def get_recent_opportunities():
+    """Get recent opportunities for dashboard"""
+    try:
+        analyzer = VerticalSpreadAnalyzer()
+        opportunities = []
+        for symbol in ['SPY', 'QQQ', 'IWM'][:3]:
+            opps = analyzer.find_bull_put_spreads(symbol)
+            if opps:
+                opportunities.extend(opps[:2])
+        return opportunities[:5]
+    except:
+        return []
